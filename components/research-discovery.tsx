@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Card,
   CardContent,
@@ -10,23 +11,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronDown, ChevronUp, FileText, Search, X } from "lucide-react";
-import { KeyboardEvent, useState } from "react";
+import { format } from "date-fns";
+import { FileText, Filter, Search, X } from "lucide-react";
+import { ChangeEvent, KeyboardEvent, useState } from "react";
 
 interface Article {
   title: string;
@@ -43,13 +37,12 @@ export function ResearchDiscoveryComponent() {
   const [tags, setTags] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [articles, setArticles] = useState<Article[]>([]);
-  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   // Filter states
-  const [dateRange, setDateRange] = useState([2020, 2023]);
-  const [selectedAuthor, setSelectedAuthor] = useState("");
+  const [startDate, setStartDate] = useState<Date>();
+  const [endDate, setEndDate] = useState<Date>();
   const [selectedJournals, setSelectedJournals] = useState<string[]>([]);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const handleSearch = async () => {
     setIsLoading(true);
@@ -94,13 +87,22 @@ export function ResearchDiscoveryComponent() {
     setSearchInput("");
     setTags([]);
     setArticles([]);
+    clearFilters();
+  };
+
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setSearchInput(e.target.value);
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && searchInput.trim()) {
       e.preventDefault();
-      setTags([...tags, searchInput.trim()]);
-      setSearchInput("");
+      if (searchType === "tags") {
+        setTags([...tags, searchInput.trim()]);
+        setSearchInput("");
+      } else {
+        handleSearch();
+      }
     }
   };
 
@@ -110,20 +112,15 @@ export function ResearchDiscoveryComponent() {
 
   const applyFilters = () => {
     // Apply filters logic here
-    console.log("Applying filters:", {
-      dateRange,
-      selectedAuthor,
-      selectedJournals,
-      selectedTags,
-    });
+    console.log("Applying filters:", { startDate, endDate, selectedJournals });
     handleSearch();
+    setIsFiltersOpen(false);
   };
 
   const clearFilters = () => {
-    setDateRange([2020, 2023]);
-    setSelectedAuthor("");
+    setStartDate(undefined);
+    setEndDate(undefined);
     setSelectedJournals([]);
-    setSelectedTags([]);
   };
 
   return (
@@ -135,9 +132,9 @@ export function ResearchDiscoveryComponent() {
 
         <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
           <Tabs
-            defaultValue="tags"
             value={searchType}
-            onValueChange={(value) => setSearchType(value)}
+            defaultValue="tags"
+            onValueChange={setSearchType}
           >
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="tags">Search by Tags</TabsTrigger>
@@ -149,7 +146,7 @@ export function ResearchDiscoveryComponent() {
                   type="text"
                   placeholder="Enter a tag and press Enter..."
                   value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
+                  onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
                 />
                 <div className="flex flex-wrap gap-2">
@@ -176,129 +173,11 @@ export function ResearchDiscoveryComponent() {
                 type="text"
                 placeholder="Enter search terms..."
                 value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
               />
             </TabsContent>
           </Tabs>
-
-          <Collapsible
-            open={isFiltersOpen}
-            onOpenChange={setIsFiltersOpen}
-            className="space-y-2"
-          >
-            <CollapsibleTrigger asChild>
-              <Button
-                variant="outline"
-                className="flex items-center justify-between w-full"
-              >
-                Filters
-                {isFiltersOpen ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Date Range</label>
-                  <Slider
-                    min={2020}
-                    max={2023}
-                    step={1}
-                    value={dateRange}
-                    onValueChange={setDateRange}
-                    className="w-full"
-                  />
-                  <div className="flex justify-between text-sm text-gray-500">
-                    <span>{dateRange[0]}</span>
-                    <span>{dateRange[1]}</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Author</label>
-                  <Select
-                    value={selectedAuthor}
-                    onValueChange={setSelectedAuthor}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select an author" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="john-doe">John Doe</SelectItem>
-                      <SelectItem value="jane-smith">Jane Smith</SelectItem>
-                      <SelectItem value="alice-johnson">
-                        Alice Johnson
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Journal/Source</label>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    "Journal of AI in Medicine",
-                    "Quantum Science Review",
-                    "Environmental Science & Policy",
-                  ].map((journal) => (
-                    <label
-                      key={journal}
-                      className="flex items-center space-x-2"
-                    >
-                      <Checkbox
-                        checked={selectedJournals.includes(journal)}
-                        onCheckedChange={(checked) => {
-                          setSelectedJournals(
-                            checked
-                              ? [...selectedJournals, journal]
-                              : selectedJournals.filter((j) => j !== journal)
-                          );
-                        }}
-                      />
-                      <span>{journal}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Tags/Categories</label>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    "AI",
-                    "Healthcare",
-                    "Quantum Computing",
-                    "Climate Change",
-                    "Policy",
-                  ].map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant={
-                        selectedTags.includes(tag) ? "default" : "outline"
-                      }
-                      className="cursor-pointer"
-                      onClick={() => {
-                        setSelectedTags(
-                          selectedTags.includes(tag)
-                            ? selectedTags.filter((t) => t !== tag)
-                            : [...selectedTags, tag]
-                        );
-                      }}
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              <div className="flex justify-between">
-                <Button onClick={applyFilters}>Apply Filters</Button>
-                <Button variant="outline" onClick={clearFilters}>
-                  Clear Filters
-                </Button>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
 
           <div className="flex justify-center space-x-4">
             <Button onClick={handleSearch} disabled={isLoading}>
@@ -319,6 +198,120 @@ export function ResearchDiscoveryComponent() {
             </Button>
           </div>
         </div>
+
+        {articles.length > 0 && (
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Search Results</h2>
+            <Popover open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  Filters
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <h3 className="font-medium">Date Range</h3>
+                    <div className="flex gap-2">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-[120px] justify-start text-left font-normal"
+                          >
+                            {startDate
+                              ? format(startDate, "dd/MM/yyyy")
+                              : "Start Date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={startDate}
+                            onSelect={setStartDate}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-[120px] justify-start text-left font-normal"
+                          >
+                            {endDate
+                              ? format(endDate, "dd/MM/yyyy")
+                              : "End Date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={endDate}
+                            onSelect={setEndDate}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-medium">Journal/Source</h3>
+                    <div className="space-y-2">
+                      {[
+                        "Journal of AI in Medicine",
+                        "Quantum Science Review",
+                        "Environmental Science & Policy",
+                      ].map((journal) => (
+                        <label
+                          key={journal}
+                          className="flex items-center space-x-2"
+                        >
+                          <Checkbox
+                            checked={selectedJournals.includes(journal)}
+                            onCheckedChange={(checked) => {
+                              setSelectedJournals(
+                                checked
+                                  ? [...selectedJournals, journal]
+                                  : selectedJournals.filter(
+                                      (j) => j !== journal
+                                    )
+                              );
+                            }}
+                          />
+                          <span>{journal}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  {searchType === "tags" && tags.length > 0 && (
+                    <div className="space-y-2">
+                      <h3 className="font-medium">Tags</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {tags.map((tag) => (
+                          <Badge
+                            key={tag}
+                            variant="outline"
+                            className="cursor-pointer"
+                          >
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <Button onClick={applyFilters}>Apply Filters</Button>
+                    <Button variant="outline" onClick={clearFilters}>
+                      Clear Filters
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
 
         {articles.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
