@@ -20,7 +20,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { FileText, Filter, Search, X } from "lucide-react";
-import { ChangeEvent, KeyboardEvent, useState } from "react";
+import React, { useState } from "react";
 
 interface Article {
   title: string;
@@ -37,18 +37,20 @@ export function ResearchDiscoveryComponent() {
   const [tags, setTags] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [articles, setArticles] = useState<Article[]>([]);
+  const [filteredArticles, setFilteredArticles] = useState<Article[]>([]);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   // Filter states
-  const [startDate, setStartDate] = useState<Date>();
-  const [endDate, setEndDate] = useState<Date>();
+  const [startDate, setStartDate] = useState<Date | undefined>();
+  const [endDate, setEndDate] = useState<Date | undefined>();
   const [selectedJournals, setSelectedJournals] = useState<string[]>([]);
+  const [selectedFilterTags, setSelectedFilterTags] = useState<string[]>([]);
 
   const handleSearch = async () => {
     setIsLoading(true);
     // Simulating API call
     await new Promise((resolve) => setTimeout(resolve, 2000));
-    setArticles([
+    const fetchedArticles = [
       {
         title:
           "The Impact of Artificial Intelligence on Modern Healthcare: A Comprehensive Study of Recent Advancements and Future Prospects",
@@ -79,26 +81,68 @@ export function ResearchDiscoveryComponent() {
         abstract:
           "This paper analyzes various climate change mitigation strategies implemented across different countries...",
       },
-    ]);
+    ];
+
+    setArticles(fetchedArticles);
+    applyFilters(fetchedArticles);
     setIsLoading(false);
+  };
+
+  const applyFilters = (fetchedArticles = articles) => {
+    let filtered = fetchedArticles;
+
+    if (searchType === "tags" && selectedFilterTags.length > 0) {
+      filtered = filtered.filter((article) =>
+        selectedFilterTags.some((tag) => article.tags.includes(tag))
+      );
+    }
+
+    if (startDate || endDate) {
+      filtered = filtered.filter((article) => {
+        const articleDate = new Date(article.date);
+        const isAfterStartDate = startDate ? articleDate >= startDate : true;
+        const isBeforeEndDate = endDate ? articleDate <= endDate : true;
+        return isAfterStartDate && isBeforeEndDate;
+      });
+    }
+
+    if (selectedJournals.length > 0) {
+      filtered = filtered.filter((article) =>
+        selectedJournals.includes(article.journal)
+      );
+    }
+
+    setFilteredArticles(filtered);
+    setIsFiltersOpen(false);
+  };
+
+  const clearFilters = () => {
+    setStartDate(undefined);
+    setEndDate(undefined);
+    setSelectedJournals([]);
+    setSelectedFilterTags([]);
+    setFilteredArticles(articles);
+    setIsFiltersOpen(false);
   };
 
   const clearSearch = () => {
     setSearchInput("");
     setTags([]);
     setArticles([]);
+    setFilteredArticles([]);
     clearFilters();
   };
 
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchInput(e.target.value);
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && searchInput.trim()) {
       e.preventDefault();
       if (searchType === "tags") {
         setTags([...tags, searchInput.trim()]);
+        setSelectedFilterTags([...selectedFilterTags, searchInput.trim()]);
         setSearchInput("");
       } else {
         handleSearch();
@@ -108,19 +152,17 @@ export function ResearchDiscoveryComponent() {
 
   const removeTag = (tagToRemove: string) => {
     setTags(tags.filter((tag) => tag !== tagToRemove));
+    setSelectedFilterTags(
+      selectedFilterTags.filter((tag) => tag !== tagToRemove)
+    );
   };
 
-  const applyFilters = () => {
-    // Apply filters logic here
-    console.log("Applying filters:", { startDate, endDate, selectedJournals });
-    handleSearch();
-    setIsFiltersOpen(false);
-  };
-
-  const clearFilters = () => {
-    setStartDate(undefined);
-    setEndDate(undefined);
-    setSelectedJournals([]);
+  const toggleFilterTag = (tag: string) => {
+    setSelectedFilterTags(
+      selectedFilterTags.includes(tag)
+        ? selectedFilterTags.filter((t) => t !== tag)
+        : [...selectedFilterTags, tag]
+    );
   };
 
   return (
@@ -199,7 +241,7 @@ export function ResearchDiscoveryComponent() {
           </div>
         </div>
 
-        {articles.length > 0 && (
+        {filteredArticles.length > 0 && (
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Search Results</h2>
             <Popover open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
@@ -292,8 +334,13 @@ export function ResearchDiscoveryComponent() {
                         {tags.map((tag) => (
                           <Badge
                             key={tag}
-                            variant="outline"
+                            variant={
+                              selectedFilterTags.includes(tag)
+                                ? "default"
+                                : "outline"
+                            }
                             className="cursor-pointer"
+                            onClick={() => toggleFilterTag(tag)}
                           >
                             {tag}
                           </Badge>
@@ -302,7 +349,9 @@ export function ResearchDiscoveryComponent() {
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <Button onClick={applyFilters}>Apply Filters</Button>
+                    <Button onClick={() => applyFilters()}>
+                      Apply Filters
+                    </Button>
                     <Button variant="outline" onClick={clearFilters}>
                       Clear Filters
                     </Button>
@@ -313,9 +362,9 @@ export function ResearchDiscoveryComponent() {
           </div>
         )}
 
-        {articles.length > 0 ? (
+        {filteredArticles.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {articles.map((article, index) => (
+            {filteredArticles.map((article, index) => (
               <Card
                 key={index}
                 className="transition-all duration-300 hover:shadow-lg"
