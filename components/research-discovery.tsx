@@ -18,9 +18,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { env, pipeline } from "@xenova/transformers";
 import { format } from "date-fns";
 import { FileText, Filter, Search, X } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 interface Article {
   title: string;
@@ -31,14 +32,33 @@ interface Article {
   abstract: string;
 }
 
+interface EnhancedArticle extends Article {
+  embedding: number[];
+  citationCount: number;
+  influenceScore: number;
+  relevanceScore?: number;
+}
+
+type FeatureExtractionPipeline = (
+  input: string | string[]
+) => Promise<Float32Array[]>;
+
 export function ResearchDiscoveryComponent() {
+  env.allowLocalModels = false; // Disallow loading from local storage
+  env.allowRemoteModels = true; // Allow downloading models from the Hugging Face Hub
+
   const [searchType, setSearchType] = useState("tags");
   const [searchInput, setSearchInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [filteredArticles, setFilteredArticles] = useState<Article[]>([]);
+  const [filteredArticles, setFilteredArticles] = useState<EnhancedArticle[]>(
+    []
+  );
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [enhancedArticles, setEnhancedArticles] = useState<EnhancedArticle[]>(
+    []
+  );
+  const [model, setModel] = useState<FeatureExtractionPipeline | null>(null);
 
   // Filter states
   const [startDate, setStartDate] = useState<Date | undefined>();
@@ -46,14 +66,70 @@ export function ResearchDiscoveryComponent() {
   const [selectedJournals, setSelectedJournals] = useState<string[]>([]);
   const [selectedFilterTags, setSelectedFilterTags] = useState<string[]>([]);
 
+  useEffect(() => {
+    async function loadModel() {
+      try {
+        const featureExtractionPipeline = await pipeline(
+          "feature-extraction",
+          "Xenova/all-MiniLM-L6-v2"
+        );
+        setModel(
+          () => (input: string | string[]) =>
+            featureExtractionPipeline(input, {
+              pooling: "mean",
+              normalize: true,
+            })
+        );
+      } catch (error) {
+        console.error("Error loading the model:", error);
+      }
+    }
+    loadModel();
+  }, []);
+
+  const enhanceArticles = async (
+    articles: Article[]
+  ): Promise<EnhancedArticle[]> => {
+    if (!model) return articles as EnhancedArticle[];
+
+    const enhancedArticles = await Promise.all(
+      articles.map(async (article) => {
+        const embeddingResult = await model(
+          article.title + " " + article.abstract
+        );
+        const embedding = Array.from(embeddingResult[0]); // Convert Float32Array to number[]
+        const citationCount = Math.floor(Math.random() * 1000);
+        const influenceScore = Math.random();
+        return { ...article, embedding, citationCount, influenceScore };
+      })
+    );
+
+    return enhancedArticles;
+  };
+
+  const calculateRelevanceScore = (
+    queryEmbedding: number[],
+    articleEmbedding: number[]
+  ): number => {
+    const dotProduct = queryEmbedding.reduce(
+      (sum, val, i) => sum + val * articleEmbedding[i],
+      0
+    );
+    const queryMagnitude = Math.sqrt(
+      queryEmbedding.reduce((sum, val) => sum + val * val, 0)
+    );
+    const articleMagnitude = Math.sqrt(
+      articleEmbedding.reduce((sum, val) => sum + val * val, 0)
+    );
+    return dotProduct / (queryMagnitude * articleMagnitude);
+  };
+
   const handleSearch = async () => {
     setIsLoading(true);
-    // Simulating API call
     await new Promise((resolve) => setTimeout(resolve, 2000));
     const fetchedArticles = [
       {
-        title:
-          "The Impact of Artificial Intelligence on Modern Healthcare: A Comprehensive Study of Recent Advancements and Future Prospects",
+        title: "The Impact of Artificial Intelligence on Modern Healthcare",
         authors: "John Doe, Jane Smith",
         date: "2023-05-15",
         journal: "Journal of AI in Medicine",
@@ -62,8 +138,7 @@ export function ResearchDiscoveryComponent() {
           "This study explores the transformative effects of artificial intelligence on healthcare delivery and patient outcomes...",
       },
       {
-        title:
-          "Quantum Computing: A New Era in Information Processing and Its Potential Applications in Various Fields",
+        title: "Quantum Computing: A New Era in Information Processing",
         authors: "Alice Johnson, Bob Williams",
         date: "2022-06-02",
         journal: "Quantum Science Review",
@@ -72,8 +147,7 @@ export function ResearchDiscoveryComponent() {
           "We present a comprehensive overview of recent advancements in quantum computing and their potential applications...",
       },
       {
-        title:
-          "Climate Change Mitigation Strategies: A Global Perspective on Policy Implementation and Effectiveness",
+        title: "Climate Change Mitigation Strategies: A Global Perspective",
         authors: "Emma Brown, Michael Green",
         date: "2021-04-20",
         journal: "Environmental Science & Policy",
@@ -83,13 +157,34 @@ export function ResearchDiscoveryComponent() {
       },
     ];
 
-    setArticles(fetchedArticles);
-    applyFilters(fetchedArticles);
+    const enhanced = await enhanceArticles(fetchedArticles);
+    setEnhancedArticles(enhanced);
+
+    if (model) {
+      const queryEmbeddingResult = await model(searchInput || tags.join(" "));
+      const queryEmbedding = Array.from(queryEmbeddingResult[0]); // Convert Float32Array to number[]
+      const ranked = enhanced
+        .map((article) => ({
+          ...article,
+          relevanceScore: calculateRelevanceScore(
+            queryEmbedding,
+            article.embedding
+          ),
+        }))
+        .sort((a, b) => b.relevanceScore! - a.relevanceScore!);
+
+      setFilteredArticles(ranked);
+    } else {
+      setFilteredArticles(enhanced);
+    }
+
+    setIsLoading(false);
+
     setIsLoading(false);
   };
 
-  const applyFilters = (fetchedArticles = articles) => {
-    let filtered = fetchedArticles;
+  const applyFilters = () => {
+    let filtered = enhancedArticles;
 
     if (searchType === "tags" && selectedFilterTags.length > 0) {
       filtered = filtered.filter((article) =>
@@ -121,14 +216,13 @@ export function ResearchDiscoveryComponent() {
     setEndDate(undefined);
     setSelectedJournals([]);
     setSelectedFilterTags([]);
-    setFilteredArticles(articles);
+    handleSearch();
     setIsFiltersOpen(false);
   };
 
   const clearSearch = () => {
     setSearchInput("");
     setTags([]);
-    setArticles([]);
     setFilteredArticles([]);
     clearFilters();
   };
@@ -169,15 +263,11 @@ export function ResearchDiscoveryComponent() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-6xl mx-auto space-y-8">
         <h1 className="text-3xl font-bold text-center text-gray-800">
-          Research Article Discovery
+          Enhanced Research Article Discovery
         </h1>
 
         <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
-          <Tabs
-            value={searchType}
-            defaultValue="tags"
-            onValueChange={setSearchType}
-          >
+          <Tabs value={searchType} onValueChange={setSearchType}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="tags">Search by Tags</TabsTrigger>
               <TabsTrigger value="text">Search by Text</TabsTrigger>
@@ -349,9 +439,7 @@ export function ResearchDiscoveryComponent() {
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <Button onClick={() => applyFilters()}>
-                      Apply Filters
-                    </Button>
+                    <Button onClick={applyFilters}>Apply Filters</Button>
                     <Button variant="outline" onClick={clearFilters}>
                       Clear Filters
                     </Button>
@@ -364,7 +452,7 @@ export function ResearchDiscoveryComponent() {
 
         {filteredArticles.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredArticles.map((article, index) => (
+            {filteredArticles.map((article: EnhancedArticle, index) => (
               <Card
                 key={index}
                 className="transition-all duration-300 hover:shadow-lg"
@@ -394,9 +482,21 @@ export function ResearchDiscoveryComponent() {
                     ))}
                   </div>
                 </CardContent>
-                <CardFooter className="flex justify-between items-center">
+                <CardFooter className="flex flex-col items-start space-y-2">
                   <p className="text-xs text-gray-500">{article.journal}</p>
-                  <Button variant="outline" size="sm">
+                  <div className="flex justify-between w-full">
+                    <span className="text-xs text-gray-600">
+                      Citations: {article.citationCount}
+                    </span>
+                    <span className="text-xs text-gray-600">
+                      Relevance:{" "}
+                      {article.relevanceScore
+                        ? (article.relevanceScore * 100).toFixed(2)
+                        : "N/A"}
+                      %
+                    </span>
+                  </div>
+                  <Button variant="outline" size="sm" className="w-full">
                     <FileText className="mr-2 h-4 w-4" />
                     Read Full Text
                   </Button>
