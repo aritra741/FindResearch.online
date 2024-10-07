@@ -1,3 +1,4 @@
+import { EnhancedArticle } from "@/app/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +10,6 @@ import {
 } from "@/components/ui/card";
 import { FileText } from "lucide-react";
 import React from "react";
-import { EnhancedArticle } from "../app/types/article";
 
 interface ArticleCardProps {
   article: EnhancedArticle;
@@ -52,9 +52,10 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
           </span>
           <span className="text-xs text-gray-600">
             Relevance:{" "}
-            {article.relevanceScore !== undefined
-              ? `${(article.relevanceScore * 100).toFixed(2)}%`
+            {article.relevanceScore
+              ? (article.relevanceScore * 100).toFixed(2)
               : "N/A"}
+            %
           </span>
         </div>
         <Button

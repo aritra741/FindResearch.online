@@ -25,7 +25,6 @@ const useArticleSearch = () => {
   const [sortOption, setSortOption] = useState<SortOption>("relevance");
   const [model, setModel] = useState<FeatureExtractionPipeline | null>(null);
 
-  // Filter states
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [selectedJournals, setSelectedJournals] = useState<string[]>([]);
@@ -66,11 +65,9 @@ const useArticleSearch = () => {
             article.title + " " + article.abstract
           );
           const embedding = Array.from(embeddingResult[0]);
-          const influenceScore = Math.random(); // Placeholder for actual influence score
           return {
             ...article,
             embedding,
-            influenceScore,
           };
         })
       );
@@ -124,7 +121,6 @@ const useArticleSearch = () => {
         );
       }
 
-      // Preserve the relevance scores and other properties
       const filteredWithRelevance = filtered.map((article) => {
         const originalArticle = allArticles.find((a) => a.doi === article.doi);
         return {

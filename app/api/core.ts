@@ -13,7 +13,6 @@ export const fetchCoreArticles = async (
   try {
     const response = await axios.get<CoreResponse>(url);
 
-    // Check if response.data and response.data.results exist
     if (!response.data || !Array.isArray(response.data.results)) {
       console.error("Unexpected CORE API response structure:", response.data);
       return [];

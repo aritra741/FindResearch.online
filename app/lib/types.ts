@@ -45,22 +45,23 @@ export interface CoreAuthor {
 }
 
 export interface CoreItem {
-  title?: string;
-  authors?: CoreAuthor[];
-  datePublished?: string;
-  publisher?: string;
-  topics?: string[];
-  abstract?: string;
+  title: string;
+  authors: CoreAuthor[];
+  datePublished: string;
+  publisher: string;
+  subjects: string[];
+  abstract: string;
   doi?: string;
-  citationCount?: number;
+  citationCount: number;
 }
 
 export interface CoreResponse {
-  totalHits: number;
-  limit: number;
-  offset: number;
-  results: CoreItem[];
+  data: CoreItem[];
 }
+
+export type FeatureExtractionPipeline = (
+  input: string | string[]
+) => Promise<Float32Array[]>;
 
 export type SortOption = "relevance" | "citationCount" | "date";
 

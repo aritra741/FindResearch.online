@@ -1,3 +1,4 @@
+import { useResearchStore } from "@/app/store/researchStore";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,39 +12,25 @@ import { format } from "date-fns";
 import { Filter } from "lucide-react";
 import React from "react";
 
-interface FilterPopoverProps {
-  isOpen: boolean;
-  setIsOpen: (isOpen: boolean) => void;
-  startDate: Date | undefined;
-  setStartDate: (date: Date | undefined) => void;
-  endDate: Date | undefined;
-  setEndDate: (date: Date | undefined) => void;
-  selectedJournals: string[];
-  setSelectedJournals: (journals: string[]) => void;
-  minCitations: string;
-  setMinCitations: (citations: string) => void;
-  availableJournals: string[];
-  applyFilters: () => void;
-  clearFilters: () => void;
-}
+const FilterPopover: React.FC = () => {
+  const {
+    isFiltersOpen,
+    setIsFiltersOpen,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
+    selectedJournals,
+    setSelectedJournals,
+    minCitations,
+    setMinCitations,
+    availableJournals,
+    applyFilters,
+    clearFilters,
+  } = useResearchStore();
 
-const FilterPopover: React.FC<FilterPopoverProps> = ({
-  isOpen,
-  setIsOpen,
-  startDate,
-  setStartDate,
-  endDate,
-  setEndDate,
-  selectedJournals,
-  setSelectedJournals,
-  minCitations,
-  setMinCitations,
-  availableJournals,
-  applyFilters,
-  clearFilters,
-}) => {
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" className="flex items-center gap-2">
           <Filter className="h-4 w-4" />
@@ -52,6 +39,7 @@ const FilterPopover: React.FC<FilterPopoverProps> = ({
       </PopoverTrigger>
       <PopoverContent className="w-80">
         <div className="space-y-4">
+          {/* Date Range */}
           <div className="space-y-2">
             <h3 className="font-medium">Date Range</h3>
             <div className="flex gap-2">
@@ -93,6 +81,8 @@ const FilterPopover: React.FC<FilterPopoverProps> = ({
               </Popover>
             </div>
           </div>
+
+          {/* Journal/Source */}
           <div className="space-y-2">
             <h3 className="font-medium">Journal/Source</h3>
             <div className="space-y-2 max-h-40 overflow-y-auto">
@@ -113,6 +103,8 @@ const FilterPopover: React.FC<FilterPopoverProps> = ({
               ))}
             </div>
           </div>
+
+          {/* Minimum Citations */}
           <div className="space-y-2">
             <h3 className="font-medium">Minimum Citations</h3>
             <Input
@@ -122,15 +114,10 @@ const FilterPopover: React.FC<FilterPopoverProps> = ({
               placeholder="Enter minimum citations"
             />
           </div>
+
+          {/* Apply and Clear buttons */}
           <div className="flex justify-between">
-            <Button
-              onClick={() => {
-                applyFilters();
-                setIsOpen(false);
-              }}
-            >
-              Apply Filters
-            </Button>
+            <Button onClick={() => applyFilters()}>Apply Filters</Button>
             <Button variant="outline" onClick={clearFilters}>
               Clear Filters
             </Button>
