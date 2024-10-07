@@ -1,5 +1,9 @@
 import { isAfter, isBefore, isValid, parse, parseISO } from "date-fns";
-import { fetchCoreArticles, fetchCrossrefArticles } from "../lib/api";
+import {
+  fetchArxivArticles,
+  fetchCoreArticles,
+  fetchCrossrefArticles,
+} from "../lib/api"; // Import the new arXiv function
 import {
   EnhancedArticle,
   FeatureExtractionPipeline,
@@ -16,12 +20,17 @@ export const fetchAndEnhanceArticles = async (
   currentPage: number,
   model: FeatureExtractionPipeline | null
 ) => {
-  const [crossrefArticles, coreArticles] = await Promise.all([
+  const [crossrefArticles, coreArticles, arxivArticles] = await Promise.all([
     fetchCrossrefArticles(searchInput, currentPage),
     fetchCoreArticles(searchInput, currentPage),
+    fetchArxivArticles(searchInput, currentPage), // Fetch articles from arXiv
   ]);
 
-  const combinedArticles = [...crossrefArticles, ...coreArticles];
+  const combinedArticles = [
+    ...crossrefArticles,
+    ...coreArticles,
+    ...arxivArticles,
+  ];
   const uniqueArticles = removeDuplicates(combinedArticles);
 
   let enhancedArticles: EnhancedArticle[] = uniqueArticles.map((article) => ({

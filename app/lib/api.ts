@@ -33,6 +33,65 @@ interface CoreApiResult {
   citationCount: number;
 }
 
+// Function to fetch articles from arXiv based on a search query
+export const fetchArxivArticles = async (
+  query: string,
+  page: number
+): Promise<Article[]> => {
+  const encodedQuery = encodeURIComponent(query);
+  const url = `http://export.arxiv.org/api/query?search_query=${encodedQuery}&start=${
+    (page - 1) * ITEMS_PER_API
+  }&max_results=${ITEMS_PER_API}`;
+
+  try {
+    const response = await axios.get(url);
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(response.data, "application/xml");
+
+    const items = Array.from(xml.getElementsByTagName("entry"));
+    return items.map((item) => ({
+      title:
+        item.getElementsByTagName("title")[0]?.textContent ||
+        "No title available",
+      authors:
+        Array.from(item.getElementsByTagName("author"))
+          .map(
+            (author) =>
+              author.getElementsByTagName("name")[0]?.textContent ||
+              "No authors available"
+          )
+          .join(", ") || "No authors available",
+      date:
+        item.getElementsByTagName("published")[0]?.textContent ||
+        "No date available",
+      journal:
+        item.getElementsByTagName("arxiv:journal_ref")[0]?.textContent ||
+        "arXiv",
+      tags:
+        Array.from(item.getElementsByTagName("category"))
+          .map((tag) => tag.getAttribute("term") || "")
+          .filter((tag) => tag.length > 0) || [],
+      abstract:
+        item.getElementsByTagName("summary")[0]?.textContent ?? ""
+          ? cleanAbstract(
+              item.getElementsByTagName("summary")[0]?.textContent ?? ""
+            )
+          : "No abstract available",
+      doi:
+        item
+          .getElementsByTagName("id")[0]
+          ?.textContent?.replace("http://arxiv.org/abs/", "arxiv:") ||
+        "No DOI available",
+      citationCount: 0, // arXiv API doesn't provide citation counts
+      referenceCount: 0, // arXiv API doesn't provide reference counts
+    }));
+  } catch (error) {
+    console.error("Error fetching arXiv articles:", error);
+    return [];
+  }
+};
+
+// Existing function to fetch articles from Crossref
 export const fetchCrossrefArticles = async (
   query: string,
   page: number
@@ -106,6 +165,7 @@ export const fetchCrossrefArticles = async (
   }
 };
 
+// Existing function to fetch articles from CORE
 export const fetchCoreArticles = async (
   query: string,
   page: number
@@ -142,6 +202,8 @@ export const fetchCoreArticles = async (
     return [];
   }
 };
+
+// Existing function to fetch citation counts
 export const fetchCitationCount = async (doi: string): Promise<number> => {
   if (doi === "No DOI available") {
     return 0;
