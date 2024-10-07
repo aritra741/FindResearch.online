@@ -34,7 +34,6 @@ import {
 } from "@/components/ui/select";
 
 const ITEMS_PER_API = 25;
-const CORE_API_KEY = "YOUR_CORE_API_KEY"; // Replace with your actual CORE API key
 
 interface Article {
   title: string;
@@ -137,10 +136,10 @@ const fetchCitationCount = async (doi: string): Promise<number> => {
   }
 
   try {
-    const openCitationsUrl = `https://opencitations.net/index/coci/api/v1/citations/${doi}`;
-    const response = await axios.get<{ count: number }>(openCitationsUrl);
-    const citationCount =
-      typeof response.data.count === "number" ? response.data.count : 0;
+    // const openCitationsUrl = `https://opencitations.net/index/coci/api/v1/citations/${doi}`;
+    // const response = await axios.get<{ count: number }>(openCitationsUrl);
+    const citationCount = 0;
+    // typeof response.data.count === "number" ? response.data.count : 0;
     setCachedCitationCount(doi, citationCount);
     return citationCount;
   } catch (error) {
@@ -244,6 +243,8 @@ export function ResearchDiscoveryComponent() {
   const [allArticles, setAllArticles] = useState<EnhancedArticle[]>([]);
   const [isFiltersActive, setIsFiltersActive] = useState(false);
   const [availableJournals, setAvailableJournals] = useState<string[]>([]);
+
+  console.log("model", process.env.NEXT_PUBLIC_CORE_API_KEY);
 
   useEffect(() => {
     async function loadModel() {
@@ -392,7 +393,7 @@ export function ResearchDiscoveryComponent() {
       const encodedQuery = encodeURIComponent(query);
       const url = `https://api.core.ac.uk/v3/search/works/?q=title:(${encodedQuery})&limit=${ITEMS_PER_API}&offset=${
         (page - 1) * ITEMS_PER_API
-      }&scroll=false&api_key=${CORE_API_KEY}`;
+      }&api_key=${process.env.NEXT_PUBLIC_CORE_API_KEY}`;
 
       try {
         const response = await axios.get<CoreResponse>(url);
