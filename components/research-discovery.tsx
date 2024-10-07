@@ -232,12 +232,8 @@ export function ResearchDiscoveryComponent() {
     []
   );
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const [enhancedArticles, setEnhancedArticles] = useState<EnhancedArticle[]>(
-    []
-  );
   const [model, setModel] = useState<FeatureExtractionPipeline | null>(null);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
   const [sortOption, setSortOption] = useState<SortOption>("relevance");
 
   // Filter states
@@ -245,6 +241,9 @@ export function ResearchDiscoveryComponent() {
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [selectedJournals, setSelectedJournals] = useState<string[]>([]);
   const [minCitations, setMinCitations] = useState<string>("");
+  const [allArticles, setAllArticles] = useState<EnhancedArticle[]>([]);
+  const [isFiltersActive, setIsFiltersActive] = useState(false);
+  const [availableJournals, setAvailableJournals] = useState<string[]>([]);
 
   useEffect(() => {
     async function loadModel() {
@@ -380,36 +379,7 @@ export function ResearchDiscoveryComponent() {
             index === self.findIndex((t) => t.doi === article.doi)
         );
 
-        // Fetch updated citation counts from OpenCitations for top 20 results
-        const updatedResults = await Promise.all(
-          combinedResults.slice(0, 20).map(async (article) => {
-            const openCitationsCount = await fetchCitationCount(article.doi);
-            return {
-              ...article,
-              citationCount: Math.max(
-                openCitationsCount,
-                article.citationCount
-              ),
-            };
-          })
-        );
-
-        // Sort by a combination of exact match, citation count, and relevance
-        const sortedArticles = updatedResults.sort((a, b) => {
-          const aIsExactMatch = exactMatches.some(
-            (match) => match.doi === a.doi
-          );
-          const bIsExactMatch = exactMatches.some(
-            (match) => match.doi === b.doi
-          );
-
-          if (aIsExactMatch && !bIsExactMatch) return -1;
-          if (!aIsExactMatch && bIsExactMatch) return 1;
-
-          return b.citationCount - a.citationCount;
-        });
-
-        return sortedArticles;
+        return combinedResults;
       } catch (error) {
         handleApiError(error, "fetchCrossrefArticles");
         return [];
@@ -417,7 +387,6 @@ export function ResearchDiscoveryComponent() {
     },
     []
   );
-
   const fetchCoreArticles = useCallback(
     async (query: string, page: number): Promise<Article[]> => {
       const encodedQuery = encodeURIComponent(query);
@@ -465,42 +434,46 @@ export function ResearchDiscoveryComponent() {
     []
   );
 
-  const applyFilters = useCallback(() => {
-    let filtered = [...enhancedArticles];
+  const applyFilters = useCallback(
+    (articles: EnhancedArticle[] = allArticles) => {
+      let filtered = articles;
 
-    if (startDate || endDate) {
-      filtered = filtered.filter((article) => {
-        const articleDate = new Date(article.date);
-        const isAfterStartDate = startDate ? articleDate >= startDate : true;
-        const isBeforeEndDate = endDate ? articleDate <= endDate : true;
-        return isAfterStartDate && isBeforeEndDate;
-      });
-    }
+      if (startDate || endDate) {
+        filtered = filtered.filter((article) => {
+          const articleDate = new Date(article.date);
+          const isAfterStartDate = startDate ? articleDate >= startDate : true;
+          const isBeforeEndDate = endDate ? articleDate <= endDate : true;
+          return isAfterStartDate && isBeforeEndDate;
+        });
+      }
 
-    if (selectedJournals.length > 0) {
-      filtered = filtered.filter((article) =>
-        selectedJournals.includes(article.journal)
-      );
-    }
+      if (selectedJournals.length > 0) {
+        filtered = filtered.filter((article) =>
+          selectedJournals.includes(article.journal)
+        );
+      }
 
-    if (minCitations) {
-      const minCitationsValue = parseInt(minCitations);
-      filtered = filtered.filter(
-        (article) => article.citationCount >= minCitationsValue
-      );
-    }
+      if (minCitations) {
+        const minCitationsValue = parseInt(minCitations);
+        filtered = filtered.filter(
+          (article) => article.citationCount >= minCitationsValue
+        );
+      }
 
-    setFilteredArticles(sortArticles(filtered, sortOption));
-    setIsFiltersOpen(false);
-  }, [
-    enhancedArticles,
-    startDate,
-    endDate,
-    selectedJournals,
-    minCitations,
-    sortArticles,
-    sortOption,
-  ]);
+      setFilteredArticles(sortArticles(filtered, sortOption));
+      setIsFiltersActive(true);
+      setIsFiltersOpen(false);
+    },
+    [
+      allArticles,
+      startDate,
+      endDate,
+      selectedJournals,
+      minCitations,
+      sortArticles,
+      sortOption,
+    ]
+  );
 
   const handleSearch = useCallback(
     async (isLoadMore: boolean = false) => {
@@ -577,18 +550,58 @@ export function ResearchDiscoveryComponent() {
           });
         }
 
-        // Apply initial sorting
-        const sortedArticles = sortArticles(rankedArticles, sortOption);
+        // Remove duplicates from the new articles
+        const newArticles = rankedArticles.filter(
+          (article) =>
+            !allArticles.some(
+              (existingArticle) =>
+                existingArticle.doi === article.doi ||
+                existingArticle.title === article.title
+            )
+        );
 
-        setEnhancedArticles((prev) =>
-          isLoadMore ? [...prev, ...rankedArticles] : rankedArticles
-        );
-        setFilteredArticles((prev) =>
-          isLoadMore ? [...prev, ...sortedArticles] : sortedArticles
-        );
+        // Update allArticles state
+        const updatedAllArticles = isLoadMore
+          ? [...allArticles, ...newArticles]
+          : newArticles;
+        setAllArticles(updatedAllArticles);
+
+        const journals = Array.from(
+          new Set(updatedAllArticles.map((article) => article.journal))
+        ).filter((journal) => journal !== "No journal available");
+        setAvailableJournals(journals);
+
+        // Apply sorting
+        const sortedArticles = sortArticles(updatedAllArticles, sortOption);
+
+        // Apply filters if active, otherwise use sorted articles
+        if (isFiltersActive) {
+          const filteredSortedArticles = sortedArticles.filter((article) => {
+            const articleDate = new Date(article.date);
+            const isAfterStartDate = startDate
+              ? articleDate >= startDate
+              : true;
+            const isBeforeEndDate = endDate ? articleDate <= endDate : true;
+            const isInSelectedJournals =
+              selectedJournals.length === 0 ||
+              selectedJournals.includes(article.journal);
+            const meetsMinCitations =
+              minCitations === "" ||
+              article.citationCount >= parseInt(minCitations);
+
+            return (
+              isAfterStartDate &&
+              isBeforeEndDate &&
+              isInSelectedJournals &&
+              meetsMinCitations
+            );
+          });
+          setFilteredArticles(filteredSortedArticles);
+        } else {
+          setFilteredArticles(sortedArticles);
+        }
 
         setPage(currentPage);
-        setHasMore(uniqueArticles.length === ITEMS_PER_API * 2);
       } catch (error) {
         handleApiError(error, "handleSearch");
       } finally {
@@ -603,12 +616,15 @@ export function ResearchDiscoveryComponent() {
       fetchCoreArticles,
       enhanceArticles,
       sortArticles,
-      setEnhancedArticles,
-      setFilteredArticles,
       setPage,
-      setHasMore,
       setIsLoading,
       sortOption,
+      allArticles,
+      isFiltersActive,
+      startDate,
+      endDate,
+      selectedJournals,
+      minCitations,
     ]
   );
 
@@ -617,16 +633,18 @@ export function ResearchDiscoveryComponent() {
     setEndDate(undefined);
     setSelectedJournals([]);
     setMinCitations("");
-    setFilteredArticles(enhancedArticles);
+    setFilteredArticles(sortArticles(allArticles, sortOption));
+    setIsFiltersActive(false);
     setIsFiltersOpen(false);
-  }, [enhancedArticles]);
+  }, [allArticles, sortArticles, sortOption]);
 
   const clearSearch = useCallback(() => {
     setSearchInput("");
+    setAllArticles([]);
     setFilteredArticles([]);
     clearFilters();
     setPage(1);
-    setHasMore(true);
+    setIsFiltersActive(false);
   }, [clearFilters]);
 
   const handleInputChange = useCallback(
@@ -653,9 +671,11 @@ export function ResearchDiscoveryComponent() {
   const handleSortChange = useCallback(
     (newSortOption: SortOption) => {
       setSortOption(newSortOption);
-      setFilteredArticles((prev) => sortArticles(prev, newSortOption));
+      const articlesToSort = isFiltersActive ? filteredArticles : allArticles;
+      const sortedArticles = sortArticles(articlesToSort, newSortOption);
+      setFilteredArticles(sortedArticles);
     },
-    [sortArticles]
+    [sortArticles, allArticles, filteredArticles, isFiltersActive]
   );
 
   return (
@@ -784,9 +804,7 @@ export function ResearchDiscoveryComponent() {
                       <div className="space-y-2">
                         <h3 className="font-medium">Journal/Source</h3>
                         <div className="space-y-2 max-h-40 overflow-y-auto">
-                          {Array.from(
-                            new Set(enhancedArticles.map((a) => a.journal))
-                          ).map((journal) => (
+                          {availableJournals.map((journal) => (
                             <label
                               key={journal}
                               className="flex items-center space-x-2"
@@ -818,7 +836,9 @@ export function ResearchDiscoveryComponent() {
                         />
                       </div>
                       <div className="flex justify-between">
-                        <Button onClick={applyFilters}>Apply Filters</Button>
+                        <Button onClick={() => applyFilters()}>
+                          Apply Filters
+                        </Button>
                         <Button variant="outline" onClick={clearFilters}>
                           Clear Filters
                         </Button>
@@ -900,13 +920,11 @@ export function ResearchDiscoveryComponent() {
               ))}
             </div>
 
-            {hasMore && (
-              <div className="flex justify-center mt-6">
-                <Button onClick={handleLoadMore} disabled={isLoading}>
-                  {isLoading ? "Loading..." : "Load More"}
-                </Button>
-              </div>
-            )}
+            <div className="flex justify-center mt-6">
+              <Button onClick={handleLoadMore} disabled={isLoading}>
+                {isLoading ? "Loading..." : "Load More"}
+              </Button>
+            </div>
           </>
         ) : (
           <p className="text-center text-gray-600">
@@ -917,7 +935,5 @@ export function ResearchDiscoveryComponent() {
     </div>
   );
 }
-
-// Add any additional utility functions or hooks here if needed
 
 export default ResearchDiscoveryComponent;
