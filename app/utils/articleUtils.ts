@@ -1,0 +1,94 @@
+import { distance } from "fastest-levenshtein";
+import { Article, RankingFactors } from "../types/article";
+
+export const cleanAbstract = (abstract: string): string => {
+  let cleaned = abstract.replace(/<\/?jats:\w+(?:\s+[^>]*)?>/g, "");
+  cleaned = cleaned.replace(/<\/?[^>]+(>|$)/g, "");
+  cleaned = cleaned
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+  return cleaned.trim();
+};
+
+export const fuzzyTitleMatch = (
+  searchTitle: string,
+  articleTitle: string,
+  threshold: number = 0.8
+): boolean => {
+  const searchWords = searchTitle.toLowerCase().split(/\s+/);
+  const articleWords = articleTitle.toLowerCase().split(/\s+/);
+
+  let matchCount = 0;
+  for (const searchWord of searchWords) {
+    for (const articleWord of articleWords) {
+      const similarity =
+        1 -
+        distance(searchWord, articleWord) /
+          Math.max(searchWord.length, articleWord.length);
+      if (similarity >= threshold) {
+        matchCount++;
+        break;
+      }
+    }
+  }
+
+  return matchCount / searchWords.length >= threshold;
+};
+
+export const calculateRankingScore = (factors: RankingFactors): number => {
+  const currentYear = new Date().getFullYear();
+  const yearsSincePublication =
+    currentYear - factors.publicationDate.getFullYear();
+
+  const relevanceWeight = 0.4;
+  const citationWeight = 0.3;
+  const recencyWeight = 0.2;
+  const exactMatchWeight = 0.1;
+
+  const normalizedCitations =
+    Math.log(factors.citationCount + 1) / Math.log(1000);
+  const recencyScore = Math.max(0, 1 - yearsSincePublication / 10);
+
+  return (
+    factors.relevanceScore * relevanceWeight +
+    normalizedCitations * citationWeight +
+    recencyScore * recencyWeight +
+    (factors.isExactMatch ? 1 : 0) * exactMatchWeight
+  );
+};
+
+export const removeDuplicates = (articles: Article[]): Article[] => {
+  const uniqueArticles = new Map<string, Article>();
+  articles.forEach((article) => {
+    const key =
+      article.doi !== "No DOI available" ? article.doi : article.title;
+    if (
+      !uniqueArticles.has(key) ||
+      article.citationCount > (uniqueArticles.get(key)?.citationCount ?? 0)
+    ) {
+      uniqueArticles.set(key, article);
+    }
+  });
+  return Array.from(uniqueArticles.values());
+};
+
+export const calculateRelevanceScore = (
+  queryEmbedding: number[],
+  articleEmbedding: number[]
+): number => {
+  const dotProduct = queryEmbedding.reduce(
+    (sum, val, i) => sum + val * articleEmbedding[i],
+    0
+  );
+  const queryMagnitude = Math.sqrt(
+    queryEmbedding.reduce((sum, val) => sum + val * val, 0)
+  );
+  const articleMagnitude = Math.sqrt(
+    articleEmbedding.reduce((sum, val) => sum + val * val, 0)
+  );
+  return dotProduct / (queryMagnitude * articleMagnitude);
+};
