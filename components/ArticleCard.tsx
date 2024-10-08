@@ -24,16 +24,22 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
     setError(null);
 
     try {
-      // Step 1: Fetch the paper by DOI to get its ID
+      const arxivId = article.arxivId;
+
+      if (!arxivId) {
+        throw new Error("No arXiv ID available.");
+      }
+
+      console.log("arxiv id", arxivId);
+
       const paperResponse = await fetch(
-        `https://api.paperswithcode.com/v1/papers/?doi=${article.doi}`
+        `https://api.paperswithcode.com/v1/papers/?arxiv_id=${arxivId}`
       );
       const paperData = await paperResponse.json();
 
       if (paperData && paperData.results && paperData.results.length > 0) {
         const paperId = paperData.results[0].id;
 
-        // Step 2: Fetch the repositories using the paper ID
         const repoResponse = await fetch(
           `https://api.paperswithcode.com/v1/papers/${paperId}/repositories/`
         );
@@ -47,7 +53,7 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
         }
       } else {
         setCodeLink(null);
-        setError("No paper found for this DOI.");
+        setError("No paper found for this arXiv ID.");
       }
     } catch (err) {
       setError("Failed to fetch code repository.");
@@ -96,7 +102,6 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
           Read Full Text
         </Button>
 
-        {/* Fetch Code Button */}
         <Button
           variant="outline"
           size="sm"
@@ -112,7 +117,6 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
           {loading ? "Fetching..." : "Get Code"}
         </Button>
 
-        {/* Display code link or error */}
         {codeLink && !error && (
           <a
             href={codeLink}

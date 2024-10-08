@@ -33,7 +33,6 @@ interface CoreApiResult {
   citationCount: number;
 }
 
-// Function to fetch articles from arXiv based on a search query
 export const fetchArxivArticles = async (
   query: string,
   page: number
@@ -84,6 +83,11 @@ export const fetchArxivArticles = async (
         "No DOI available",
       citationCount: 0, // arXiv API doesn't provide citation counts
       referenceCount: 0, // arXiv API doesn't provide reference counts
+      arxivId:
+        item
+          .getElementsByTagName("id")[0]
+          ?.textContent?.replace("http://arxiv.org/abs/", "") ||
+        "No arXiv ID available",
     }));
   } catch (error) {
     console.error("Error fetching arXiv articles:", error);
@@ -91,7 +95,6 @@ export const fetchArxivArticles = async (
   }
 };
 
-// Existing function to fetch articles from Crossref
 export const fetchCrossrefArticles = async (
   query: string,
   page: number
@@ -165,7 +168,6 @@ export const fetchCrossrefArticles = async (
   }
 };
 
-// Existing function to fetch articles from CORE
 export const fetchCoreArticles = async (
   query: string,
   page: number

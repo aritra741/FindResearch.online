@@ -8,6 +8,7 @@ export interface Article {
   doi: string;
   citationCount: number;
   referenceCount: number;
+  arxivId?: string;
 }
 
 export interface EnhancedArticle extends Article {
