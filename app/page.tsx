@@ -5,10 +5,13 @@ import FilterPopover from "@/components/FilterPopover";
 import SearchBar from "@/components/SearchBar";
 import SortSelect from "@/components/SortSelect";
 import { Button } from "@/components/ui/button";
+import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { EnhancedArticle } from "../app/lib/types";
 import { useResearchStore } from "../app/store/researchStore";
 
 export default function ResearchDiscoveryComponent() {
+  const [parent] = useAutoAnimate();
+
   const {
     filteredArticles,
     isLoading,
@@ -56,7 +59,10 @@ export default function ResearchDiscoveryComponent() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div
+              ref={parent}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            >
               {filteredArticles.map(
                 (article: EnhancedArticle, index: number) => (
                   <ArticleCard
