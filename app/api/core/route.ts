@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
-import axios from "axios";
 import { ITEMS_PER_API } from "@/app/lib/constants";
 import { Article, CoreApiResponse, CoreApiResult } from "@/app/lib/types";
+import axios from "axios";
+import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

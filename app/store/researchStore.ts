@@ -70,8 +70,6 @@ export const useResearchStore = create<ResearchState>((set, get) => ({
   setAvailableJournals: (journals) => set({ availableJournals: journals }),
 
   handleSearch: async (isLoadMore = false) => {
-    const totalStartTime = performance.now();
-
     const {
       searchInput,
       page,
@@ -87,60 +85,29 @@ export const useResearchStore = create<ResearchState>((set, get) => ({
     try {
       const currentPage = isLoadMore ? page + 1 : 1;
 
-      const fetchStartTime = performance.now();
       const enhancedArticles = await fetchAndEnhanceArticles(
         searchInput,
         currentPage
       );
-      const fetchEndTime = performance.now();
-      console.log(
-        `fetchAndEnhanceArticles time: ${(
-          fetchEndTime - fetchStartTime
-        ).toFixed(2)} ms`
-      );
 
-      const updateStartTime = performance.now();
       const updatedAllArticles = isLoadMore
         ? [...get().allArticles, ...enhancedArticles]
         : enhancedArticles;
       setAllArticles(updatedAllArticles);
-      const updateEndTime = performance.now();
-      console.log(
-        `Update allArticles time: ${(updateEndTime - updateStartTime).toFixed(
-          2
-        )} ms`
-      );
 
-      const journalsStartTime = performance.now();
       const journals = Array.from(
         new Set(updatedAllArticles.map((article) => article.journal))
       ).filter((journal) => journal !== "No journal available");
       setAvailableJournals(journals);
-      const journalsEndTime = performance.now();
-      console.log(
-        `Process journals time: ${(journalsEndTime - journalsStartTime).toFixed(
-          2
-        )} ms`
-      );
 
-      const sortStartTime = performance.now();
       const sortedArticles = sortArticles(updatedAllArticles, sortOption);
       setFilteredArticles(sortedArticles);
-      const sortEndTime = performance.now();
-      console.log(
-        `Sort articles time: ${(sortEndTime - sortStartTime).toFixed(2)} ms`
-      );
 
       setPage(currentPage);
     } catch (error) {
       console.error("Error in handleSearch:", error);
     } finally {
       setIsLoading(false);
-      const totalEndTime = performance.now();
-      const totalExecutionTime = totalEndTime - totalStartTime;
-      console.log(
-        `Total handleSearch execution time: ${totalExecutionTime.toFixed(2)} ms`
-      );
     }
   },
 

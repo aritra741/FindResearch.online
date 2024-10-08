@@ -29,16 +29,12 @@ const FilterPopover: React.FC = () => {
     clearFilters,
   } = useResearchStore();
 
-  // Log dates to debug
-  console.log("startDate:", startDate, "endDate:", endDate);
-
-  // Ensure dates are correctly set to Date objects or undefined
   const handleStartDateSelect = (date: Date | undefined) => {
-    setStartDate(date); // Set to undefined when cleared
+    setStartDate(date);
   };
 
   const handleEndDateSelect = (date: Date | undefined) => {
-    setEndDate(date); // Set to undefined when cleared
+    setEndDate(date);
   };
 
   return (
@@ -51,11 +47,9 @@ const FilterPopover: React.FC = () => {
       </PopoverTrigger>
       <PopoverContent className="w-80">
         <div className="space-y-4">
-          {/* Date Range */}
           <div className="space-y-2">
             <h3 className="font-medium">Date Range</h3>
             <div className="flex gap-2">
-              {/* Start Date */}
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -70,14 +64,13 @@ const FilterPopover: React.FC = () => {
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={startDate || undefined} // Use undefined if startDate is null
+                    selected={startDate || undefined}
                     onSelect={handleStartDateSelect}
                     initialFocus
                   />
                 </PopoverContent>
               </Popover>
 
-              {/* End Date */}
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -92,7 +85,7 @@ const FilterPopover: React.FC = () => {
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={endDate || undefined} // Use undefined if endDate is null
+                    selected={endDate || undefined}
                     onSelect={handleEndDateSelect}
                     initialFocus
                   />
@@ -101,7 +94,6 @@ const FilterPopover: React.FC = () => {
             </div>
           </div>
 
-          {/* Journals */}
           <div className="space-y-2">
             <h3 className="font-medium">Journal/Source</h3>
             <div className="space-y-2 max-h-40 overflow-y-auto">
@@ -123,7 +115,6 @@ const FilterPopover: React.FC = () => {
             </div>
           </div>
 
-          {/* Minimum Citations */}
           <div className="space-y-2">
             <h3 className="font-medium">Minimum Citations</h3>
             <Input
@@ -134,7 +125,6 @@ const FilterPopover: React.FC = () => {
             />
           </div>
 
-          {/* Apply and Clear Buttons */}
           <div className="flex justify-between">
             <Button onClick={applyFilters}>Apply Filters</Button>
             <Button variant="outline" onClick={clearFilters}>

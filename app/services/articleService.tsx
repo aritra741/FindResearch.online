@@ -110,8 +110,25 @@ export async function fetchAndEnhanceArticles(
   console.timeEnd("fetchArticles");
 
   console.time("enhanceAndRankArticles");
+
   const allArticles = results.flat();
-  const enhancedArticles = enhanceAndRankArticles(allArticles, searchInput);
+
+  const uniqueDoiSet = new Set<string>();
+  const uniqueArticles = allArticles.filter((article) => {
+    let doi = article.doi;
+
+    if (doi && doi.startsWith("arxiv:")) {
+      doi = doi.replace(/v\d+$/, ""); // Remove version number (e.g., v1, v2, etc.)
+    }
+
+    if (doi && !uniqueDoiSet.has(doi)) {
+      uniqueDoiSet.add(doi);
+      return true;
+    }
+    return false;
+  });
+
+  const enhancedArticles = enhanceAndRankArticles(uniqueArticles, searchInput);
   console.timeEnd("enhanceAndRankArticles");
 
   return enhancedArticles;
