@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@huggingface/transformers": "^3.0.0-alpha.19",
+    "@radix-ui/react-accordion": "^1.2.1",
     "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-collapsible": "^1.1.1",
     "@radix-ui/react-popover": "^1.1.2",
@@ -19,6 +20,7 @@
     "@radix-ui/react-tabs": "^1.1.1",
     "@types/lodash": "^4.17.10",
     "@types/xml2js": "^0.4.14",
+    "@xenova/transformers": "^2.17.2",
     "axios": "^1.7.7",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
@@ -26,6 +28,7 @@
     "fastest-levenshtein": "^1.0.16",
     "lucide-react": "^0.447.0",
     "next": "14.2.14",
+    "onnxruntime-node": "^1.19.2",
     "react": "^18",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18",

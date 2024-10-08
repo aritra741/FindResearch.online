@@ -166,3 +166,9 @@ export interface ArxivJournal {
   };
   _: string;
 }
+
+export interface ExtractedFeatures {
+  main_outcome: string;
+  methodology: string;
+  implications: string;
+}

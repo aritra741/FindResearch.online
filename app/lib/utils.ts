@@ -1,5 +1,6 @@
 import { distance } from "fastest-levenshtein";
-import { Article, RankingFactors } from "./types";
+import { Article, ExtractedFeatures, RankingFactors } from "./types";
+import axios from "axios";
 
 export const cleanAbstract = (abstract: string): string => {
   let cleaned = abstract.replace(/<\/?jats:\w+(?:\s+[^>]*)?>/g, "");
@@ -91,3 +92,17 @@ export const getCachedCitationCount = (doi: string): number | null => {
 export const setCachedCitationCount = (doi: string, count: number) => {
   citationCache[doi] = { count, timestamp: Date.now() };
 };
+
+export async function extractFeaturesFromAbstract(
+  abstract: string
+): Promise<ExtractedFeatures> {
+  try {
+    const response = await axios.post<ExtractedFeatures>("/api/insights", {
+      abstract,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error extracting features:", error);
+    throw new Error("Failed to extract features from the abstract");
+  }
+}

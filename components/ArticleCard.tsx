@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import { EnhancedArticle } from "@/app/lib/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,13 +9,40 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Code, FileText } from "lucide-react";
-import React from "react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ExtractedFeatures } from "@/app/lib/types";
+import { extractFeaturesFromAbstract } from "@/app/lib/utils";
 
 interface ArticleCardProps {
   article: EnhancedArticle;
 }
 
 const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
+  const [aiInsights, setAiInsights] = useState<ExtractedFeatures | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleAIInsightsClick = async () => {
+    if (aiInsights) return; // Don't fetch if we already have insights
+    setIsLoading(true);
+    setError(null);
+    try {
+      const features = await extractFeaturesFromAbstract(article.abstract);
+      setAiInsights(features);
+    } catch (err) {
+      setError("Failed to load AI insights");
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <Card className="transition-all duration-300 hover:shadow-lg flex flex-col">
       <CardHeader>
@@ -42,6 +70,40 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
             ? article.abstract
             : "No abstract available"}
         </p>
+        <Accordion type="single" collapsible className="mt-4">
+          <AccordionItem value="ai-insights">
+            <AccordionTrigger onClick={handleAIInsightsClick}>
+              AI Insights
+            </AccordionTrigger>
+            <AccordionContent>
+              {isLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                </div>
+              ) : error ? (
+                <p className="text-red-500 text-sm">{error}</p>
+              ) : aiInsights ? (
+                <div className="space-y-2 text-sm">
+                  <p>
+                    <strong>Main Outcome:</strong> {aiInsights.main_outcome}
+                  </p>
+                  <p>
+                    <strong>Methodology:</strong> {aiInsights.methodology}
+                  </p>
+                  <p>
+                    <strong>Implications:</strong> {aiInsights.implications}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  Click to load AI insights
+                </p>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </CardContent>
       <CardFooter className="flex flex-col items-start space-y-2">
         <p className="text-xs text-gray-500">
