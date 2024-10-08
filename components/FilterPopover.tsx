@@ -29,6 +29,18 @@ const FilterPopover: React.FC = () => {
     clearFilters,
   } = useResearchStore();
 
+  // Log dates to debug
+  console.log("startDate:", startDate, "endDate:", endDate);
+
+  // Ensure dates are correctly set to Date objects or undefined
+  const handleStartDateSelect = (date: Date | undefined) => {
+    setStartDate(date); // Set to undefined when cleared
+  };
+
+  const handleEndDateSelect = (date: Date | undefined) => {
+    setEndDate(date); // Set to undefined when cleared
+  };
+
   return (
     <Popover open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
       <PopoverTrigger asChild>
@@ -43,38 +55,45 @@ const FilterPopover: React.FC = () => {
           <div className="space-y-2">
             <h3 className="font-medium">Date Range</h3>
             <div className="flex gap-2">
+              {/* Start Date */}
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className="w-[120px] justify-start text-left font-normal"
                   >
-                    {startDate ? format(startDate, "dd/MM/yyyy") : "Start Date"}
+                    {startDate && !isNaN(new Date(startDate).getTime())
+                      ? format(new Date(startDate), "dd/MM/yyyy")
+                      : "Start Date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={startDate}
-                    onSelect={setStartDate}
+                    selected={startDate || undefined} // Use undefined if startDate is null
+                    onSelect={handleStartDateSelect}
                     initialFocus
                   />
                 </PopoverContent>
               </Popover>
+
+              {/* End Date */}
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className="w-[120px] justify-start text-left font-normal"
                   >
-                    {endDate ? format(endDate, "dd/MM/yyyy") : "End Date"}
+                    {endDate && !isNaN(new Date(endDate).getTime())
+                      ? format(new Date(endDate), "dd/MM/yyyy")
+                      : "End Date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={endDate}
-                    onSelect={setEndDate}
+                    selected={endDate || undefined} // Use undefined if endDate is null
+                    onSelect={handleEndDateSelect}
                     initialFocus
                   />
                 </PopoverContent>
@@ -82,7 +101,7 @@ const FilterPopover: React.FC = () => {
             </div>
           </div>
 
-          {/* Journal/Source */}
+          {/* Journals */}
           <div className="space-y-2">
             <h3 className="font-medium">Journal/Source</h3>
             <div className="space-y-2 max-h-40 overflow-y-auto">
@@ -115,9 +134,9 @@ const FilterPopover: React.FC = () => {
             />
           </div>
 
-          {/* Apply and Clear buttons */}
+          {/* Apply and Clear Buttons */}
           <div className="flex justify-between">
-            <Button onClick={() => applyFilters()}>Apply Filters</Button>
+            <Button onClick={applyFilters}>Apply Filters</Button>
             <Button variant="outline" onClick={clearFilters}>
               Clear Filters
             </Button>
