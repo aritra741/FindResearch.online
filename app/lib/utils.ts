@@ -61,23 +61,6 @@ export const calculateRankingScore = (factors: RankingFactors): number => {
   );
 };
 
-export const calculateRelevanceScore = (
-  queryEmbedding: number[],
-  articleEmbedding: number[]
-): number => {
-  const dotProduct = queryEmbedding.reduce(
-    (sum, val, i) => sum + val * articleEmbedding[i],
-    0
-  );
-  const queryMagnitude = Math.sqrt(
-    queryEmbedding.reduce((sum, val) => sum + val * val, 0)
-  );
-  const articleMagnitude = Math.sqrt(
-    articleEmbedding.reduce((sum, val) => sum + val * val, 0)
-  );
-  return dotProduct / (queryMagnitude * articleMagnitude);
-};
-
 export const removeDuplicates = (articles: Article[]): Article[] => {
   const uniqueArticles = new Map<string, Article>();
   articles.forEach((article) => {

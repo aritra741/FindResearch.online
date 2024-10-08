@@ -159,3 +159,10 @@ export interface ArxivResponse {
     entry?: ArxivEntry[];
   };
 }
+
+export interface ArxivJournal {
+  $: {
+    xmlns: string;
+  };
+  _: string;
+}

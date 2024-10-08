@@ -45,12 +45,18 @@ export const fetchArxivArticles = async (
   query: string,
   page: number
 ): Promise<Article[]> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
   try {
     const response = await axios.get(
-      `/api/arxiv?query=${encodeURIComponent(query)}&page=${page}`
+      `/api/arxiv?query=${encodeURIComponent(query)}&page=${page}`,
+      { signal: controller.signal }
     );
+    clearTimeout(timeoutId);
     return response.data;
   } catch (error) {
+    clearTimeout(timeoutId);
     console.error("Error fetching arXiv articles:", error);
     return [];
   }

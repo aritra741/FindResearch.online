@@ -1,3 +1,4 @@
+import { ArxivJournal } from "@/app/lib/types";
 import { useResearchStore } from "@/app/store/researchStore";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -35,6 +36,21 @@ const FilterPopover: React.FC = () => {
 
   const handleEndDateSelect = (date: Date | undefined) => {
     setEndDate(date);
+  };
+
+  const getJournalName = (journal: string | ArxivJournal): string => {
+    if (typeof journal === "string") {
+      return journal;
+    }
+    if (journal && typeof journal === "object" && "_" in journal) {
+      return journal._;
+    }
+    return "Unknown Journal";
+  };
+
+  const isJournalSelected = (journal: string | ArxivJournal): boolean => {
+    const journalName = getJournalName(journal);
+    return selectedJournals.includes(journalName);
   };
 
   return (
@@ -97,21 +113,24 @@ const FilterPopover: React.FC = () => {
           <div className="space-y-2">
             <h3 className="font-medium">Journal/Source</h3>
             <div className="space-y-2 max-h-40 overflow-y-auto">
-              {availableJournals.map((journal) => (
-                <label key={journal} className="flex items-center space-x-2">
-                  <Checkbox
-                    checked={selectedJournals.includes(journal)}
-                    onCheckedChange={(checked) => {
-                      setSelectedJournals(
-                        checked
-                          ? [...selectedJournals, journal]
-                          : selectedJournals.filter((j) => j !== journal)
-                      );
-                    }}
-                  />
-                  <span>{journal}</span>
-                </label>
-              ))}
+              {availableJournals.map((journal, index) => {
+                const journalName = getJournalName(journal);
+                return (
+                  <label key={index} className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={isJournalSelected(journal)}
+                      onCheckedChange={(checked) => {
+                        setSelectedJournals(
+                          checked
+                            ? [...selectedJournals, journalName]
+                            : selectedJournals.filter((j) => j !== journalName)
+                        );
+                      }}
+                    />
+                    <span>{journalName}</span>
+                  </label>
+                );
+              })}
             </div>
           </div>
 

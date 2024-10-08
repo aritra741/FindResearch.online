@@ -79,9 +79,20 @@ export function enhanceAndRankArticles(
   const searchTerms = searchInput.toLowerCase().split(/\s+/);
   const corpusStats = getCorpusStats(articles, searchTerms);
 
-  const enhancedArticles: EnhancedArticle[] = articles.map((article) => ({
+  const scoredArticles = articles.map((article) => ({
     ...article,
     relevanceScore: calculateBM25Score(article, searchTerms, corpusStats),
+  }));
+
+  const minScore = Math.min(...scoredArticles.map((a) => a.relevanceScore));
+  const maxScore = Math.max(...scoredArticles.map((a) => a.relevanceScore));
+
+  const enhancedArticles: EnhancedArticle[] = scoredArticles.map((article) => ({
+    ...article,
+    relevanceScore:
+      maxScore > minScore
+        ? (article.relevanceScore - minScore) / (maxScore - minScore)
+        : 1,
     rankingScore: 0,
   }));
 

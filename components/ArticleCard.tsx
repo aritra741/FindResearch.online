@@ -7,61 +7,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { AlertCircle, Code, FileText, Loader2 } from "lucide-react";
-import React, { useState } from "react";
+import { Code, FileText } from "lucide-react";
+import React from "react";
 
 interface ArticleCardProps {
   article: EnhancedArticle;
 }
 
 const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
-  const [loading, setLoading] = useState(false);
-  const [codeLink, setCodeLink] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchCodeLink = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const arxivId = article.arxivId;
-
-      if (!arxivId) {
-        throw new Error("No arXiv ID available.");
-      }
-
-      const paperResponse = await fetch(
-        `https://api.paperswithcode.com/v1/papers/?arxiv_id=${arxivId}`
-      );
-      const paperData = await paperResponse.json();
-
-      if (paperData && paperData.results && paperData.results.length > 0) {
-        const paperId = paperData.results[0].id;
-
-        const repoResponse = await fetch(
-          `https://api.paperswithcode.com/v1/papers/${paperId}/repositories/`
-        );
-        const repoData = await repoResponse.json();
-
-        if (repoData && repoData.length > 0) {
-          setCodeLink(repoData[0].url); // Assuming the first repo
-        } else {
-          setCodeLink(null);
-          setError("No code repository found.");
-        }
-      } else {
-        setCodeLink(null);
-        setError("No paper found for this arXiv ID.");
-      }
-    } catch (err) {
-      setError("Failed to fetch code repository.");
-      setCodeLink(null);
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <Card className="transition-all duration-300 hover:shadow-lg flex flex-col">
       <CardHeader>
@@ -142,33 +95,16 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
           variant="outline"
           size="sm"
           className="w-full mt-2"
-          onClick={fetchCodeLink}
-          disabled={!article.downloadUrl || loading}
+          onClick={() =>
+            article.repositoryUrl
+              ? window.open(article.repositoryUrl, "_blank")
+              : null
+          }
+          disabled={!article.repositoryUrl}
         >
-          {loading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Code className="mr-2 h-4 w-4" />
-          )}
-          {loading ? "Fetching..." : "Get Code"}
+          <Code className="mr-2 h-4 w-4" />
+          Get Code
         </Button>
-
-        {codeLink && !error && (
-          <a
-            href={codeLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 text-sm mt-2"
-          >
-            View Code Repository
-          </a>
-        )}
-        {error && (
-          <div className="flex items-center text-red-600 text-sm mt-2">
-            <AlertCircle className="mr-2 h-4 w-4" />
-            {error}
-          </div>
-        )}
       </CardFooter>
     </Card>
   );
