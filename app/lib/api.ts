@@ -4,7 +4,14 @@ import {
   ITEMS_PER_API,
   setCachedCitationCount,
 } from "./constants";
-import { Article, CrossrefItem, CrossrefResponse } from "./types";
+import {
+  Article,
+  CoreApiResult,
+  CrossrefItem,
+  CrossrefResponse,
+  PapersWithCodeResponse,
+  PapersWithCodeResult,
+} from "./types";
 import { cleanAbstract } from "./utils";
 
 interface CoreApiResponse {
@@ -15,23 +22,38 @@ interface CoreApiResponse {
   results: CoreApiResult[];
 }
 
-interface CoreApiResult {
-  id: string;
-  authors: { name: string }[];
-  title: string;
-  datePublished: string;
-  publisher: string;
-  subjects: string[];
-  abstract: string;
-  doi?: string;
-  downloadUrl?: string;
-  fullTextIdentifier?: string;
-  language?: {
-    code: string;
-    name: string;
-  };
-  citationCount: number;
-}
+export const fetchPapersWithCodeArticles = async (
+  query: string,
+  page: number
+): Promise<Article[]> => {
+  const encodedQuery = encodeURIComponent(query);
+  const url = `https://paperswithcode.com/api/v1/search/?q=${encodedQuery}&page=${page}`;
+
+  try {
+    const response = await axios.get<PapersWithCodeResponse>(url);
+    const items = response.data.results;
+
+    return items.map((item: PapersWithCodeResult) => ({
+      title: item.paper.title || "No title available",
+      authors: item.paper.authors.join(", ") || "No authors available",
+      date: item.paper.published || "No date available",
+      journal: item.paper.conference || "No journal/conference available",
+      tags: [], // PapersWithCode response doesn't include tags, so it's empty
+      abstract: item.paper.abstract || "No abstract available",
+      doi: item.paper.arxiv_id
+        ? `arxiv:${item.paper.arxiv_id}`
+        : "No DOI available",
+      citationCount: 0, // Papers with Code API doesn't provide citation counts
+      referenceCount: 0, // Papers with Code API doesn't provide reference counts
+      downloadUrl: item.paper.url_pdf || "", // Direct PDF link
+      repositoryUrl: item.repository.url || "", // GitHub repo URL if available
+      framework: item.repository.framework || "", // Framework used if available
+    }));
+  } catch (error) {
+    console.error("Error fetching Papers with Code articles:", error);
+    return [];
+  }
+};
 
 export const fetchArxivArticles = async (
   query: string,

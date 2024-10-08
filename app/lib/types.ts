@@ -8,6 +8,9 @@ export interface Article {
   doi: string;
   citationCount: number;
   referenceCount: number;
+  downloadUrl?: string;
+  repositoryUrl?: string;
+  framework?: string;
   arxivId?: string;
 }
 
@@ -15,6 +18,62 @@ export interface EnhancedArticle extends Article {
   embedding: number[];
   relevanceScore?: number;
   rankingScore?: number;
+}
+
+interface PapersWithCodePaper {
+  id: string;
+  arxiv_id: string | null;
+  nips_id: string | null;
+  url_abs: string;
+  url_pdf: string;
+  title: string;
+  abstract: string;
+  authors: string[];
+  published: string;
+  conference: string | null;
+  conference_url_abs: string | null;
+  conference_url_pdf: string | null;
+  proceeding: string | null;
+}
+
+export interface CoreApiResult {
+  id: string;
+  authors: { name: string }[];
+  title: string;
+  datePublished: string;
+  publisher: string;
+  subjects: string[];
+  abstract: string;
+  doi?: string;
+  downloadUrl?: string;
+  fullTextIdentifier?: string;
+  language?: {
+    code: string;
+    name: string;
+  };
+  citationCount: number;
+}
+
+export interface PapersWithCodeRepository {
+  url: string;
+  owner: string;
+  name: string;
+  description: string;
+  stars: number;
+  framework: string;
+}
+
+export interface PapersWithCodeResult {
+  paper: PapersWithCodePaper;
+  repository: PapersWithCodeRepository;
+  is_official: boolean;
+}
+
+export interface PapersWithCodeResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: PapersWithCodeResult[];
 }
 
 export interface CrossrefAuthor {
