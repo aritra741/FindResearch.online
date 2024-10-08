@@ -118,9 +118,16 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
           onClick={() =>
             article.downloadUrl
               ? window.open(article.downloadUrl, "_blank")
+              : article.arxivId
+              ? window.open(
+                  `https://arxiv.org/pdf/${article.arxivId}`,
+                  "_blank"
+                )
               : article.doi && article.doi !== "No DOI available"
               ? window.open(`https://doi.org/${article.doi}`, "_blank")
-              : alert("No DOI or download URL available for this article")
+              : alert(
+                  "No DOI, arXiv ID, or download URL available for this article"
+                )
           }
           disabled={
             !article.downloadUrl &&
