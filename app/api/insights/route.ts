@@ -1,33 +1,40 @@
+"use server";
+
+import { env, pipeline } from "@xenova/transformers";
 import { NextRequest, NextResponse } from "next/server";
-import { pipeline } from "@xenova/transformers";
+
+env.backends.onnx.wasm.wasmPaths =
+  "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/";
 
 type QuestionAnsweringPipeline = {
   (question: string, context: string): Promise<{ answer: string }>;
 };
 
-let qa: QuestionAnsweringPipeline;
+let qa: QuestionAnsweringPipeline | null = null;
 
 async function setupModel(): Promise<void> {
-  qa = (await pipeline(
-    "question-answering",
-    "Xenova/distilbert-base-cased-distilled-squad"
-  )) as QuestionAnsweringPipeline;
+  if (!qa) {
+    qa = (await pipeline(
+      "question-answering",
+      "Xenova/distilbert-base-cased-distilled-squad"
+    )) as QuestionAnsweringPipeline;
+  }
 }
 
 async function extractFeature(
   abstract: string,
   question: string
 ): Promise<string> {
-  const result = await qa(question, abstract);
+  if (!qa) {
+    await setupModel();
+  }
+  const result = await qa!(question, abstract);
   return result.answer;
 }
 
 async function extractFeatures(
   abstract: string
 ): Promise<{ [key: string]: string }> {
-  /**
-   * Extract multiple features from the given abstract.
-   */
   const features = {
     main_outcome: "What is the main finding or outcome of this research?",
     methodology: "What methodology or approach was used in this research?",
@@ -58,8 +65,6 @@ function validateAndCleanFeatures(features: { [key: string]: string }): {
   return cleanFeatures;
 }
 
-setupModel();
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -72,6 +77,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    await setupModel(); // Ensure model is set up before processing
     const rawFeatures = await extractFeatures(abstract);
     const cleanFeatures = validateAndCleanFeatures(rawFeatures);
 

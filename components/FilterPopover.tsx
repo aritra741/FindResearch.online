@@ -119,7 +119,7 @@ const FilterPopover: React.FC = () => {
                   <label key={index} className="flex items-center space-x-2">
                     <Checkbox
                       checked={isJournalSelected(journal)}
-                      onCheckedChange={(checked) => {
+                      onCheckedChange={(checked: boolean) => {
                         setSelectedJournals(
                           checked
                             ? [...selectedJournals, journalName]
