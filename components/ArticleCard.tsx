@@ -15,8 +15,6 @@ interface ArticleCardProps {
 }
 
 const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
-  // console.log("Article in ArticleCard:", JSON.stringify(article, null, 2));
-
   const [loading, setLoading] = useState(false);
   const [codeLink, setCodeLink] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -31,8 +29,6 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
       if (!arxivId) {
         throw new Error("No arXiv ID available.");
       }
-
-      // console.log("arxiv id", arxivId);
 
       const paperResponse = await fetch(
         `https://api.paperswithcode.com/v1/papers/?arxiv_id=${arxivId}`
@@ -120,11 +116,16 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
           size="sm"
           className="w-full"
           onClick={() =>
-            article.doi && article.doi !== "No DOI available"
+            article.downloadUrl
+              ? window.open(article.downloadUrl, "_blank")
+              : article.doi && article.doi !== "No DOI available"
               ? window.open(`https://doi.org/${article.doi}`, "_blank")
-              : alert("No DOI available for this article")
+              : alert("No DOI or download URL available for this article")
           }
-          disabled={!article.doi || article.doi === "No DOI available"}
+          disabled={
+            !article.downloadUrl &&
+            (!article.doi || article.doi === "No DOI available")
+          }
         >
           <FileText className="mr-2 h-4 w-4" />
           Read Full Text
@@ -135,7 +136,7 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
           size="sm"
           className="w-full mt-2"
           onClick={fetchCodeLink}
-          disabled={loading}
+          disabled={!article.downloadUrl || loading}
         >
           {loading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

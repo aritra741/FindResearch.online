@@ -98,8 +98,6 @@ export async function fetchAndEnhanceArticles(
   searchInput: string,
   currentPage: number
 ): Promise<EnhancedArticle[]> {
-  console.time("fetchArticles");
-
   const results = await Promise.all([
     fetchCrossrefArticles(searchInput, currentPage),
     fetchCoreArticles(searchInput, currentPage),
@@ -107,29 +105,37 @@ export async function fetchAndEnhanceArticles(
     fetchPapersWithCodeArticles(searchInput, currentPage),
   ]);
 
-  console.timeEnd("fetchArticles");
-
-  console.time("enhanceAndRankArticles");
-
   const allArticles = results.flat();
 
-  const uniqueDoiSet = new Set<string>();
-  const uniqueArticles = allArticles.filter((article) => {
+  const uniqueDoiMap = new Map<string, EnhancedArticle>();
+  const papersWithCodeMap = new Map<string, EnhancedArticle>();
+
+  allArticles.forEach((article) => {
     let doi = article.doi;
 
     if (doi && doi.startsWith("arxiv:")) {
       doi = doi.replace(/v\d+$/, ""); // Remove version number (e.g., v1, v2, etc.)
     }
 
-    if (doi && !uniqueDoiSet.has(doi)) {
-      uniqueDoiSet.add(doi);
-      return true;
+    if (doi) {
+      const isPapersWithCode =
+        "repositoryUrl" in article && article.repositoryUrl !== undefined;
+
+      if (isPapersWithCode) {
+        papersWithCodeMap.set(doi, article as EnhancedArticle);
+      } else if (!uniqueDoiMap.has(doi)) {
+        uniqueDoiMap.set(doi, article as EnhancedArticle);
+      }
     }
-    return false;
   });
 
+  papersWithCodeMap.forEach((article, doi) => {
+    uniqueDoiMap.set(doi, article);
+  });
+
+  const uniqueArticles = Array.from(uniqueDoiMap.values());
+
   const enhancedArticles = enhanceAndRankArticles(uniqueArticles, searchInput);
-  console.timeEnd("enhanceAndRankArticles");
 
   return enhancedArticles;
 }
