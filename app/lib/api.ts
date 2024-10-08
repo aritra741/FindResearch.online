@@ -1,12 +1,7 @@
 import axios from "axios";
-import {
-  getCachedCitationCount,
-  ITEMS_PER_API,
-  setCachedCitationCount,
-} from "./constants";
+import { ITEMS_PER_API } from "./constants";
 import {
   Article,
-  CoreApiResult,
   CrossrefItem,
   CrossrefResponse,
   PapersWithCodeResponse,
@@ -14,40 +9,31 @@ import {
 } from "./types";
 import { cleanAbstract } from "./utils";
 
-interface CoreApiResponse {
-  totalHits: number;
-  limit: number;
-  offset: number;
-  scrollId: string | null;
-  results: CoreApiResult[];
-}
-
 export const fetchPapersWithCodeArticles = async (
   query: string,
   page: number
 ): Promise<Article[]> => {
-  const encodedQuery = encodeURIComponent(query);
-  const url = `https://paperswithcode.com/api/v1/search/?q=${encodedQuery}&page=${page}`;
-
   try {
-    const response = await axios.get<PapersWithCodeResponse>(url);
+    const response = await axios.get<PapersWithCodeResponse>(
+      `/api/paperswithcode?query=${encodeURIComponent(query)}&page=${page}`
+    );
     const items = response.data.results;
 
     return items.map((item: PapersWithCodeResult) => ({
-      title: item.paper.title || "No title available",
-      authors: item.paper.authors.join(", ") || "No authors available",
-      date: item.paper.published || "No date available",
-      journal: item.paper.conference || "No journal/conference available",
-      tags: [], // PapersWithCode response doesn't include tags, so it's empty
-      abstract: item.paper.abstract || "No abstract available",
-      doi: item.paper.arxiv_id
+      title: item.paper?.title || "No title available",
+      authors: item.paper?.authors?.join(", ") || "No authors available",
+      date: item.paper?.published || "No date available",
+      journal: item.paper?.conference || "No journal/conference available",
+      tags: [],
+      abstract: item.paper?.abstract || "No abstract available",
+      doi: item.paper?.arxiv_id
         ? `arxiv:${item.paper.arxiv_id}`
         : "No DOI available",
-      citationCount: 0, // Papers with Code API doesn't provide citation counts
-      referenceCount: 0, // Papers with Code API doesn't provide reference counts
-      downloadUrl: item.paper.url_pdf || "", // Direct PDF link
-      repositoryUrl: item.repository.url || "", // GitHub repo URL if available
-      framework: item.repository.framework || "", // Framework used if available
+      citationCount: 0,
+      referenceCount: 0,
+      downloadUrl: item.paper?.url_pdf || "",
+      repositoryUrl: item.repository?.url || "",
+      framework: item.repository?.framework || "",
     }));
   } catch (error) {
     console.error("Error fetching Papers with Code articles:", error);
@@ -59,58 +45,11 @@ export const fetchArxivArticles = async (
   query: string,
   page: number
 ): Promise<Article[]> => {
-  const encodedQuery = encodeURIComponent(query);
-  const url = `http://export.arxiv.org/api/query?search_query=${encodedQuery}&start=${
-    (page - 1) * ITEMS_PER_API
-  }&max_results=${ITEMS_PER_API}`;
-
   try {
-    const response = await axios.get(url);
-    const parser = new DOMParser();
-    const xml = parser.parseFromString(response.data, "application/xml");
-
-    const items = Array.from(xml.getElementsByTagName("entry"));
-    return items.map((item) => ({
-      title:
-        item.getElementsByTagName("title")[0]?.textContent ||
-        "No title available",
-      authors:
-        Array.from(item.getElementsByTagName("author"))
-          .map(
-            (author) =>
-              author.getElementsByTagName("name")[0]?.textContent ||
-              "No authors available"
-          )
-          .join(", ") || "No authors available",
-      date:
-        item.getElementsByTagName("published")[0]?.textContent ||
-        "No date available",
-      journal:
-        item.getElementsByTagName("arxiv:journal_ref")[0]?.textContent ||
-        "arXiv",
-      tags:
-        Array.from(item.getElementsByTagName("category"))
-          .map((tag) => tag.getAttribute("term") || "")
-          .filter((tag) => tag.length > 0) || [],
-      abstract:
-        item.getElementsByTagName("summary")[0]?.textContent ?? ""
-          ? cleanAbstract(
-              item.getElementsByTagName("summary")[0]?.textContent ?? ""
-            )
-          : "No abstract available",
-      doi:
-        item
-          .getElementsByTagName("id")[0]
-          ?.textContent?.replace("http://arxiv.org/abs/", "arxiv:") ||
-        "No DOI available",
-      citationCount: 0, // arXiv API doesn't provide citation counts
-      referenceCount: 0, // arXiv API doesn't provide reference counts
-      arxivId:
-        item
-          .getElementsByTagName("id")[0]
-          ?.textContent?.replace("http://arxiv.org/abs/", "") ||
-        "No arXiv ID available",
-    }));
+    const response = await axios.get(
+      `/api/arxiv?query=${encodeURIComponent(query)}&page=${page}`
+    );
+    return response.data;
   } catch (error) {
     console.error("Error fetching arXiv articles:", error);
     return [];
@@ -194,59 +133,13 @@ export const fetchCoreArticles = async (
   query: string,
   page: number
 ): Promise<Article[]> => {
-  const encodedQuery = encodeURIComponent(query);
-  const url = `https://api.core.ac.uk/v3/search/works/?q=${encodedQuery}&limit=${ITEMS_PER_API}&offset=${
-    (page - 1) * ITEMS_PER_API
-  }&api_key=${process.env.NEXT_PUBLIC_CORE_API_KEY}`;
-
   try {
-    const response = await axios.get<CoreApiResponse>(url);
-
-    if (!response.data || !Array.isArray(response.data.results)) {
-      console.error("Unexpected CORE API response structure:", response.data);
-      return [];
-    }
-
-    return response.data.results.map((item: CoreApiResult) => ({
-      title: item.title || "No title available",
-      authors:
-        item.authors.map((author) => author.name).join(", ") ||
-        "No authors available",
-      date: item.datePublished || "No date available",
-      journal: item.publisher || "No journal available",
-      tags: item.subjects || [],
-      abstract: item.abstract || "No abstract available",
-      doi: item.doi || "No DOI available",
-      citationCount: item.citationCount || 0,
-      referenceCount: 0, // CORE API doesn't provide this information
-      downloadUrl: item.downloadUrl || item.fullTextIdentifier || "",
-    }));
+    const response = await axios.get<Article[]>(
+      `/api/core?query=${encodeURIComponent(query)}&page=${page}`
+    );
+    return response.data;
   } catch (error) {
     console.error("Error fetching CORE articles:", error);
     return [];
-  }
-};
-
-// Existing function to fetch citation counts
-export const fetchCitationCount = async (doi: string): Promise<number> => {
-  if (doi === "No DOI available") {
-    return 0;
-  }
-
-  const cachedCount = getCachedCitationCount(doi);
-  if (cachedCount !== null) {
-    return cachedCount;
-  }
-
-  try {
-    // const openCitationsUrl = `https://opencitations.net/index/coci/api/v1/citations/${doi}`;
-    // const response = await axios.get<{ count: number }>(openCitationsUrl);
-    const citationCount = 0;
-    // typeof response.data.count === "number" ? response.data.count : 0;
-    setCachedCitationCount(doi, citationCount);
-    return citationCount;
-  } catch (error) {
-    console.error(`Error fetching citation count for ${doi}:`, error);
-    return 0;
   }
 };

@@ -3,78 +3,119 @@ import {
   fetchArxivArticles,
   fetchCoreArticles,
   fetchCrossrefArticles,
-} from "../lib/api"; // Import the new arXiv function
-import {
-  EnhancedArticle,
-  FeatureExtractionPipeline,
-  SortOption,
-} from "../lib/types";
-import {
-  calculateRankingScore,
-  calculateRelevanceScore,
-  removeDuplicates,
-} from "../lib/utils";
+  fetchPapersWithCodeArticles,
+} from "../lib/api";
+import { Article, EnhancedArticle, SortOption } from "../lib/types";
 
-export const fetchAndEnhanceArticles = async (
-  searchInput: string,
-  currentPage: number,
-  model: FeatureExtractionPipeline | null
-) => {
-  const [crossrefArticles, coreArticles, arxivArticles] = await Promise.all([
-    fetchCrossrefArticles(searchInput, currentPage),
-    fetchCoreArticles(searchInput, currentPage),
-    fetchArxivArticles(searchInput, currentPage), // Fetch articles from arXiv
-  ]);
+const k1 = 1.2;
+const b = 0.75;
 
-  const combinedArticles = [
-    ...crossrefArticles,
-    ...coreArticles,
-    ...arxivArticles,
-  ];
-  const uniqueArticles = removeDuplicates(combinedArticles);
+interface CorpusStats {
+  docCount: number;
+  avgDocLength: number;
+  termFrequency: { [term: string]: number };
+}
 
-  let enhancedArticles: EnhancedArticle[] = uniqueArticles.map((article) => ({
+function calculateBM25Score(
+  article: Article,
+  searchTerms: string[],
+  corpusStats: CorpusStats
+): number {
+  const doc = article.title + " " + article.abstract;
+  const docLength = doc.split(/\s+/).length;
+
+  return searchTerms.reduce((score, term) => {
+    const tf = (doc.match(new RegExp(term, "gi")) || []).length;
+    const idf = Math.log(
+      (corpusStats.docCount - corpusStats.termFrequency[term] + 0.5) /
+        (corpusStats.termFrequency[term] + 0.5) +
+        1
+    );
+    const numerator = tf * (k1 + 1);
+    const denominator =
+      tf + k1 * (1 - b + b * (docLength / corpusStats.avgDocLength));
+    return score + idf * (numerator / denominator);
+  }, 0);
+}
+
+function getCorpusStats(
+  articles: Article[],
+  searchTerms: string[]
+): CorpusStats {
+  let totalLength = 0;
+  const termFrequency: { [term: string]: number } = {};
+
+  searchTerms.forEach((term) => (termFrequency[term] = 0));
+
+  articles.forEach((article) => {
+    const doc = article.title + " " + article.abstract;
+    totalLength += doc.split(/\s+/).length;
+
+    searchTerms.forEach((term) => {
+      if (doc.toLowerCase().includes(term.toLowerCase())) {
+        termFrequency[term]++;
+      }
+    });
+  });
+
+  return {
+    docCount: articles.length,
+    avgDocLength: totalLength / articles.length,
+    termFrequency,
+  };
+}
+
+function calculateRankingScore(article: EnhancedArticle): number {
+  const citationScore = Math.log(article.citationCount + 1) * 10;
+  const dateScore =
+    (new Date().getFullYear() - new Date(article.date).getFullYear() + 1) * 5;
+  return article.relevanceScore ?? 0 + citationScore + dateScore;
+}
+
+export function enhanceAndRankArticles(
+  articles: Article[],
+  searchInput: string
+): EnhancedArticle[] {
+  const searchTerms = searchInput.toLowerCase().split(/\s+/);
+  const corpusStats = getCorpusStats(articles, searchTerms);
+
+  const enhancedArticles: EnhancedArticle[] = articles.map((article) => ({
     ...article,
-    embedding: [],
-    relevanceScore: 0,
+    relevanceScore: calculateBM25Score(article, searchTerms, corpusStats),
     rankingScore: 0,
   }));
 
-  if (model) {
-    const queryEmbeddingResult = await model(searchInput);
-    const queryEmbedding = Array.from(queryEmbeddingResult[0]);
+  enhancedArticles.forEach((article) => {
+    article.rankingScore = calculateRankingScore(article);
+  });
 
-    enhancedArticles = await Promise.all(
-      enhancedArticles.map(async (article) => {
-        const embeddingResult = await model(
-          article.title + " " + article.abstract
-        );
-        const embedding = Array.from(embeddingResult[0]);
-        const relevanceScore = calculateRelevanceScore(
-          queryEmbedding,
-          embedding
-        );
-        const rankingScore = calculateRankingScore({
-          relevanceScore,
-          citationCount: article.citationCount,
-          publicationDate: new Date(article.date),
-          isExactMatch: article.title
-            .toLowerCase()
-            .includes(searchInput.toLowerCase()),
-        });
+  return enhancedArticles.sort(
+    (a, b) => b.rankingScore ?? 0 - (a.rankingScore ?? 0)
+  );
+}
 
-        return {
-          ...article,
-          embedding,
-          relevanceScore,
-          rankingScore,
-        };
-      })
-    );
-  }
+export async function fetchAndEnhanceArticles(
+  searchInput: string,
+  currentPage: number
+): Promise<EnhancedArticle[]> {
+  console.time("fetchArticles");
+
+  const results = await Promise.all([
+    fetchCrossrefArticles(searchInput, currentPage),
+    fetchCoreArticles(searchInput, currentPage),
+    fetchArxivArticles(searchInput, currentPage),
+    fetchPapersWithCodeArticles(searchInput, currentPage),
+  ]);
+
+  console.timeEnd("fetchArticles");
+
+  console.time("enhanceAndRankArticles");
+  const allArticles = results.flat();
+  const enhancedArticles = enhanceAndRankArticles(allArticles, searchInput);
+  console.timeEnd("enhanceAndRankArticles");
 
   return enhancedArticles;
-};
+}
 
 export const sortArticles = (
   articles: EnhancedArticle[],
@@ -118,7 +159,6 @@ export const filterArticles = (
   minCitations: string
 ) => {
   return articles.filter((article) => {
-    // Date filtering
     const articleDate = parseArticleDate(article.date);
     const isAfterStartDate = startDate
       ? isAfter(articleDate, startDate) ||
@@ -129,12 +169,10 @@ export const filterArticles = (
         articleDate.getTime() === endDate.getTime()
       : true;
 
-    // Journal filtering
     const isInSelectedJournals =
       selectedJournals.length === 0 ||
       selectedJournals.includes(article.journal);
 
-    // Citation filtering
     const meetsMinCitations =
       minCitations === "" || article.citationCount >= parseInt(minCitations);
 

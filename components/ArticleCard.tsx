@@ -15,6 +15,8 @@ interface ArticleCardProps {
 }
 
 const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
+  // console.log("Article in ArticleCard:", JSON.stringify(article, null, 2));
+
   const [loading, setLoading] = useState(false);
   const [codeLink, setCodeLink] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +32,7 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
         throw new Error("No arXiv ID available.");
       }
 
-      console.log("arxiv id", arxivId);
+      // console.log("arxiv id", arxivId);
 
       const paperResponse = await fetch(
         `https://api.paperswithcode.com/v1/papers/?arxiv_id=${arxivId}`
@@ -58,7 +60,7 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
     } catch (err) {
       setError("Failed to fetch code repository.");
       setCodeLink(null);
-      console.log(err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -68,23 +70,46 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
     <Card className="transition-all duration-300 hover:shadow-lg flex flex-col">
       <CardHeader>
         <CardTitle className="text-lg font-bold">
-          <div className="max-w-[250px] break-words">{article.title}</div>
+          <div className="max-w-[250px] break-words">
+            {typeof article.title === "string"
+              ? article.title
+              : "No title available"}
+          </div>
         </CardTitle>
-        <p className="text-sm text-gray-600">{article.authors}</p>
-        <p className="text-xs text-gray-500">{article.date}</p>
+        <p className="text-sm text-gray-600">
+          {typeof article.authors === "string"
+            ? article.authors
+            : "No authors available"}
+        </p>
+        <p className="text-xs text-gray-500">
+          {typeof article.date === "string"
+            ? article.date
+            : "No date available"}
+        </p>
       </CardHeader>
       <CardContent className="flex-grow">
-        <p className="text-sm text-gray-700 line-clamp-3">{article.abstract}</p>
+        <p className="text-sm text-gray-700 line-clamp-3">
+          {typeof article.abstract === "string"
+            ? article.abstract
+            : "No abstract available"}
+        </p>
       </CardContent>
       <CardFooter className="flex flex-col items-start space-y-2">
-        <p className="text-xs text-gray-500">{article.journal}</p>
+        <p className="text-xs text-gray-500">
+          {typeof article.journal === "string"
+            ? article.journal
+            : "No journal available"}
+        </p>
         <div className="flex justify-between w-full">
           <span className="text-xs text-gray-600">
-            Citations: {article.citationCount}
+            Citations:{" "}
+            {typeof article.citationCount === "number"
+              ? article.citationCount
+              : "N/A"}
           </span>
           <span className="text-xs text-gray-600">
             Relevance:{" "}
-            {article.relevanceScore
+            {typeof article.relevanceScore === "number"
               ? (article.relevanceScore * 100).toFixed(2)
               : "N/A"}
             %
@@ -95,8 +120,11 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
           size="sm"
           className="w-full"
           onClick={() =>
-            window.open(`https://doi.org/${article.doi}`, "_blank")
+            article.doi && article.doi !== "No DOI available"
+              ? window.open(`https://doi.org/${article.doi}`, "_blank")
+              : alert("No DOI available for this article")
           }
+          disabled={!article.doi || article.doi === "No DOI available"}
         >
           <FileText className="mr-2 h-4 w-4" />
           Read Full Text

@@ -6,7 +6,7 @@ import SearchBar from "@/components/SearchBar";
 import SortSelect from "@/components/SortSelect";
 import { Button } from "@/components/ui/button";
 import { useResearchStore } from "../app/store/researchStore";
-import { useModel } from "./hooks/useModel";
+import { EnhancedArticle } from "../app/lib/types";
 
 export default function ResearchDiscoveryComponent() {
   const {
@@ -16,14 +16,13 @@ export default function ResearchDiscoveryComponent() {
     handleLoadMore,
     clearSearch,
   } = useResearchStore();
-  const model = useModel();
 
   const onSearch = () => {
-    handleSearch(model);
+    handleSearch();
   };
 
   const onLoadMore = () => {
-    handleLoadMore(model);
+    handleLoadMore();
   };
 
   return (
@@ -58,12 +57,14 @@ export default function ResearchDiscoveryComponent() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredArticles.map((article, index) => (
-                <ArticleCard
-                  key={`${article.doi}-${index}`}
-                  article={article}
-                />
-              ))}
+              {filteredArticles.map(
+                (article: EnhancedArticle, index: number) => (
+                  <ArticleCard
+                    key={`${article.doi}-${index}`}
+                    article={article}
+                  />
+                )
+              )}
             </div>
 
             <div className="flex justify-center mt-6">

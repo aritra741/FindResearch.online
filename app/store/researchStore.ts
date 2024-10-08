@@ -1,9 +1,5 @@
 import { create } from "zustand";
-import {
-  EnhancedArticle,
-  FeatureExtractionPipeline,
-  SortOption,
-} from "../lib/types";
+import { EnhancedArticle, SortOption } from "../lib/types";
 import {
   fetchAndEnhanceArticles,
   filterArticles,
@@ -37,11 +33,8 @@ interface ResearchState {
   setIsFiltersActive: (active: boolean) => void;
   availableJournals: string[];
   setAvailableJournals: (journals: string[]) => void;
-  handleSearch: (
-    model: FeatureExtractionPipeline | null,
-    isLoadMore?: boolean
-  ) => Promise<void>;
-  handleLoadMore: (model: FeatureExtractionPipeline | null) => Promise<void>;
+  handleSearch: (isLoadMore?: boolean) => Promise<void>;
+  handleLoadMore: () => Promise<void>;
   clearSearch: () => void;
   handleSortChange: (option: SortOption) => void;
   applyFilters: () => void;
@@ -76,10 +69,9 @@ export const useResearchStore = create<ResearchState>((set, get) => ({
   availableJournals: [],
   setAvailableJournals: (journals) => set({ availableJournals: journals }),
 
-  handleSearch: async (
-    model: FeatureExtractionPipeline | null,
-    isLoadMore = false
-  ) => {
+  handleSearch: async (isLoadMore = false) => {
+    const totalStartTime = performance.now();
+
     const {
       searchInput,
       page,
@@ -94,36 +86,67 @@ export const useResearchStore = create<ResearchState>((set, get) => ({
     setIsLoading(true);
     try {
       const currentPage = isLoadMore ? page + 1 : 1;
+
+      const fetchStartTime = performance.now();
       const enhancedArticles = await fetchAndEnhanceArticles(
         searchInput,
-        currentPage,
-        model
+        currentPage
+      );
+      const fetchEndTime = performance.now();
+      console.log(
+        `fetchAndEnhanceArticles time: ${(
+          fetchEndTime - fetchStartTime
+        ).toFixed(2)} ms`
       );
 
+      const updateStartTime = performance.now();
       const updatedAllArticles = isLoadMore
         ? [...get().allArticles, ...enhancedArticles]
         : enhancedArticles;
-
       setAllArticles(updatedAllArticles);
+      const updateEndTime = performance.now();
+      console.log(
+        `Update allArticles time: ${(updateEndTime - updateStartTime).toFixed(
+          2
+        )} ms`
+      );
 
+      const journalsStartTime = performance.now();
       const journals = Array.from(
         new Set(updatedAllArticles.map((article) => article.journal))
       ).filter((journal) => journal !== "No journal available");
       setAvailableJournals(journals);
+      const journalsEndTime = performance.now();
+      console.log(
+        `Process journals time: ${(journalsEndTime - journalsStartTime).toFixed(
+          2
+        )} ms`
+      );
 
+      const sortStartTime = performance.now();
       const sortedArticles = sortArticles(updatedAllArticles, sortOption);
       setFilteredArticles(sortedArticles);
+      const sortEndTime = performance.now();
+      console.log(
+        `Sort articles time: ${(sortEndTime - sortStartTime).toFixed(2)} ms`
+      );
+
       setPage(currentPage);
     } catch (error) {
       console.error("Error in handleSearch:", error);
     } finally {
       setIsLoading(false);
+      const totalEndTime = performance.now();
+      const totalExecutionTime = totalEndTime - totalStartTime;
+      console.log(
+        `Total handleSearch execution time: ${totalExecutionTime.toFixed(2)} ms`
+      );
     }
   },
 
-  handleLoadMore: async (model: FeatureExtractionPipeline | null) => {
+  handleLoadMore: async () => {
     const { handleSearch } = get();
-    await handleSearch(model, true);
+    await handleSearch(true);
   },
 
   clearSearch: () => {

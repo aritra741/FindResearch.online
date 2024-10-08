@@ -15,7 +15,7 @@ export interface Article {
 }
 
 export interface EnhancedArticle extends Article {
-  embedding: number[];
+  embedding?: number[];
   relevanceScore?: number;
   rankingScore?: number;
 }
@@ -34,24 +34,6 @@ interface PapersWithCodePaper {
   conference_url_abs: string | null;
   conference_url_pdf: string | null;
   proceeding: string | null;
-}
-
-export interface CoreApiResult {
-  id: string;
-  authors: { name: string }[];
-  title: string;
-  datePublished: string;
-  publisher: string;
-  subjects: string[];
-  abstract: string;
-  doi?: string;
-  downloadUrl?: string;
-  fullTextIdentifier?: string;
-  language?: {
-    code: string;
-    name: string;
-  };
-  citationCount: number;
 }
 
 export interface PapersWithCodeRepository {
@@ -100,6 +82,24 @@ export interface CrossrefResponse {
   };
 }
 
+export interface CoreApiResult {
+  id: string;
+  authors: { name: string }[];
+  title: string;
+  datePublished: string;
+  publisher: string;
+  subjects: string[];
+  abstract: string;
+  doi?: string;
+  downloadUrl?: string;
+  fullTextIdentifier?: string;
+  language?: {
+    code: string;
+    name: string;
+  };
+  citationCount: number;
+}
+
 export interface CoreAuthor {
   name: string;
 }
@@ -113,6 +113,14 @@ export interface CoreItem {
   abstract: string;
   doi?: string;
   citationCount: number;
+}
+
+export interface CoreApiResponse {
+  totalHits: number;
+  limit: number;
+  offset: number;
+  scrollId: string | null;
+  results: CoreApiResult[];
 }
 
 export interface CoreResponse {
@@ -130,4 +138,24 @@ export interface RankingFactors {
   citationCount: number;
   publicationDate: Date;
   isExactMatch: boolean;
+}
+
+export interface ArxivAuthor {
+  name: string[];
+}
+
+export interface ArxivEntry {
+  title: string[];
+  author?: ArxivAuthor[];
+  published: string[];
+  "arxiv:journal_ref"?: string[];
+  category?: Array<{ $: { term: string } }>;
+  summary: string[];
+  id: string[];
+}
+
+export interface ArxivResponse {
+  feed: {
+    entry?: ArxivEntry[];
+  };
 }

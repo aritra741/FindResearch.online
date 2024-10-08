@@ -1,11 +1,9 @@
-import { useModel } from "@/app/hooks/useModel";
 import { Input } from "@/components/ui/input";
 import React from "react";
 import { useResearchStore } from "../app/store/researchStore";
 
 const SearchBar: React.FC = () => {
   const { searchInput, setSearchInput, handleSearch } = useResearchStore();
-  const model = useModel();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchInput(e.target.value);
@@ -14,7 +12,7 @@ const SearchBar: React.FC = () => {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && searchInput.trim()) {
       e.preventDefault();
-      handleSearch(model);
+      handleSearch();
     }
   };
 
