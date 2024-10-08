@@ -1,5 +1,11 @@
-import React, { useState } from "react";
-import { EnhancedArticle } from "@/app/lib/types";
+import { EnhancedArticle, ExtractedFeatures } from "@/app/lib/types";
+import { extractFeaturesFromAbstract } from "@/app/lib/utils";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,16 +14,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Code, FileText } from "lucide-react";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ExtractedFeatures } from "@/app/lib/types";
-import { extractFeaturesFromAbstract } from "@/app/lib/utils";
+import { Code, FileText } from "lucide-react";
+import React, { useState } from "react";
 
 interface ArticleCardProps {
   article: EnhancedArticle;
@@ -80,7 +79,6 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
                 <div className="space-y-2">
                   <Skeleton className="h-4 w-full" />
                   <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
                 </div>
               ) : error ? (
                 <p className="text-red-500 text-sm">{error}</p>
@@ -91,9 +89,6 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
                   </p>
                   <p>
                     <strong>Methodology:</strong> {aiInsights.methodology}
-                  </p>
-                  <p>
-                    <strong>Implications:</strong> {aiInsights.implications}
                   </p>
                 </div>
               ) : (

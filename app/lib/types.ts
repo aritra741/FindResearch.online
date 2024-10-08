@@ -170,5 +170,4 @@ export interface ArxivJournal {
 export interface ExtractedFeatures {
   main_outcome: string;
   methodology: string;
-  implications: string;
 }
