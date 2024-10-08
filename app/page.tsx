@@ -5,8 +5,8 @@ import FilterPopover from "@/components/FilterPopover";
 import SearchBar from "@/components/SearchBar";
 import SortSelect from "@/components/SortSelect";
 import { Button } from "@/components/ui/button";
-import { useResearchStore } from "../app/store/researchStore";
 import { EnhancedArticle } from "../app/lib/types";
+import { useResearchStore } from "../app/store/researchStore";
 
 export default function ResearchDiscoveryComponent() {
   const {
@@ -29,7 +29,7 @@ export default function ResearchDiscoveryComponent() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-6xl mx-auto space-y-8">
         <h1 className="text-3xl font-bold text-center text-gray-800">
-          Enhanced Research Article Discovery
+          Find Research Online
         </h1>
 
         <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
@@ -74,9 +74,7 @@ export default function ResearchDiscoveryComponent() {
             </div>
           </>
         ) : (
-          <p className="text-center text-gray-600">
-            No articles found. Try a new search.
-          </p>
+          <p className="text-center text-gray-600">Try a new search.</p>
         )}
       </div>
     </div>

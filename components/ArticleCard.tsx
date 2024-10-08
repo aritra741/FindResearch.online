@@ -15,7 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Code, FileText } from "lucide-react";
+import { Code, FileText, Zap } from "lucide-react";
 import React, { useState } from "react";
 
 interface ArticleCardProps {
@@ -69,36 +69,6 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
             ? article.abstract
             : "No abstract available"}
         </p>
-        <Accordion type="single" collapsible className="mt-4">
-          <AccordionItem value="ai-insights">
-            <AccordionTrigger onClick={handleAIInsightsClick}>
-              AI Insights
-            </AccordionTrigger>
-            <AccordionContent>
-              {isLoading ? (
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
-                </div>
-              ) : error ? (
-                <p className="text-red-500 text-sm">{error}</p>
-              ) : aiInsights ? (
-                <div className="space-y-2 text-sm">
-                  <p>
-                    <strong>Main Outcome:</strong> {aiInsights.main_outcome}
-                  </p>
-                  <p>
-                    <strong>Methodology:</strong> {aiInsights.methodology}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">
-                  Click to load AI insights
-                </p>
-              )}
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
       </CardContent>
       <CardFooter className="flex flex-col items-start space-y-2">
         <p className="text-xs text-gray-500">
@@ -162,6 +132,39 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
           <Code className="mr-2 h-4 w-4" />
           Get Code
         </Button>
+        <Accordion type="single" collapsible className="mt-4 w-full">
+          <AccordionItem value="ai-insights">
+            <AccordionTrigger
+              className="text-sm"
+              onClick={handleAIInsightsClick}
+            >
+              <Zap color="#7C3AED" /> AI Insights
+            </AccordionTrigger>
+            <AccordionContent>
+              {isLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                </div>
+              ) : error ? (
+                <p className="text-red-500 text-sm">{error}</p>
+              ) : aiInsights ? (
+                <div className="space-y-2 text-sm">
+                  <p>
+                    <strong>Main Outcome:</strong> {aiInsights.main_outcome}
+                  </p>
+                  <p>
+                    <strong>Methodology:</strong> {aiInsights.methodology}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  Click to load AI insights
+                </p>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </CardFooter>
     </Card>
   );
