@@ -45,6 +45,11 @@ export default function RootLayout({
           src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/mml-svg.js"
           strategy="afterInteractive"
         />
+        <Script
+          defer
+          data-domain="findresearch.online"
+          src="https://plausible.io/js/Script.js"
+        ></Script>
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
