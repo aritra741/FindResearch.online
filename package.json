@@ -28,6 +28,7 @@
     "date-fns": "^3.6.0",
     "fastest-levenshtein": "^1.0.16",
     "lucide-react": "^0.447.0",
+    "mathjax": "^3.2.2",
     "next": "14.2.14",
     "node-loader": "^2.0.0",
     "onnxruntime-node": "^1.19.2",
@@ -41,6 +42,7 @@
     "zustand": "^5.0.0-rc.2"
   },
   "devDependencies": {
+    "@types/mathjax": "^0.0.40",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

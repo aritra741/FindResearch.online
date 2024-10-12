@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useRef } from "react";
 import { EnhancedArticle, ExtractedFeatures } from "@/app/lib/types";
 import { extractFeaturesFromAbstract } from "@/app/lib/utils";
 import {
@@ -16,16 +17,78 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Code, FileText, Zap } from "lucide-react";
-import React, { useState } from "react";
+
+declare global {
+  interface Window {
+    MathJax?: {
+      typesetPromise: (
+        elements: (string | Element | ReadonlyArray<string | Element>)[]
+      ) => Promise<void>;
+      startup: {
+        promise: Promise<void>;
+      };
+      tex: {
+        inlineMath: string[][];
+      };
+      svg: {
+        fontCache: "local" | "global" | "none";
+      };
+      options: {
+        enableMenu: boolean;
+      };
+      loader: {
+        load: (...components: string[]) => Promise<void>;
+      };
+      config: (config: Record<string, unknown>) => void;
+    };
+  }
+}
 
 interface ArticleCardProps {
   article: EnhancedArticle;
 }
 
+const MathMLRenderer: React.FC<{ mathml: string }> = ({ mathml }) => {
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (ref.current && window.MathJax) {
+      window.MathJax.typesetPromise([ref.current])
+        .then(() => {
+          // MathJax typesetting is complete
+        })
+        .catch((err: Error) =>
+          console.error("MathJax typesetting failed:", err)
+        );
+    }
+  }, [mathml]);
+
+  return (
+    <span
+      ref={ref}
+      dangerouslySetInnerHTML={{ __html: mathml }}
+      className="inline-block align-middle"
+    />
+  );
+};
+
 const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
   const [aiInsights, setAiInsights] = useState<ExtractedFeatures | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mathJaxReady, setMathJaxReady] = useState(false);
+
+  useEffect(() => {
+    const checkMathJax = () => {
+      if (window.MathJax) {
+        setMathJaxReady(true);
+      } else {
+        setTimeout(checkMathJax, 100);
+      }
+    };
+
+    checkMathJax();
+  }, []);
 
   const handleAIInsightsClick = async () => {
     if (aiInsights) return; // Don't fetch if we already have insights
@@ -42,13 +105,36 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
     }
   };
 
+  const renderTitle = (title: string) => {
+    if (!mathJaxReady) {
+      return title; // Return plain text if MathJax is not ready
+    }
+
+    const mathmlRegex = /<math[\s\S]*?<\/math>/g;
+    const parts = title.split(mathmlRegex);
+    const mathmlElements = title.match(mathmlRegex) || [];
+
+    return (
+      <span className="inline-flex flex-wrap items-center gap-1">
+        {parts.map((part, index) => (
+          <React.Fragment key={index}>
+            {part}
+            {mathmlElements[index] && (
+              <MathMLRenderer mathml={mathmlElements[index]} />
+            )}
+          </React.Fragment>
+        ))}
+      </span>
+    );
+  };
+
   return (
     <Card className="transition-all duration-300 hover:shadow-lg flex flex-col">
       <CardHeader>
         <CardTitle className="text-lg font-bold">
           <div className="max-w-[250px] break-words">
             {typeof article.title === "string"
-              ? article.title
+              ? renderTitle(article.title)
               : "No title available"}
           </div>
         </CardTitle>

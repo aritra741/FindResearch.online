@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import Script from "next/script";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -25,6 +26,26 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <Script id="MathJax-config" strategy="beforeInteractive">
+          {`
+            window.MathJax = {
+              startup: {
+                elementJax: ['mml'],
+                typeset: true
+              },
+              options: {
+                enableMenu: false
+              }
+            };
+          `}
+        </Script>
+        <Script
+          id="MathJax-script"
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/mml-svg.js"
+          strategy="afterInteractive"
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
